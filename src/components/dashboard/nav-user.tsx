@@ -1,14 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
   LogOut,
+  Pencil,
   Sparkles,
-  Upload,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,10 +27,19 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { AvatarImportModal } from "@/components/dashboard/avatar-import-modal";
+import { AvatarCropModal } from "@/components/dashboard/avatar-crop-modal";
 import { uploadAvatar } from "@/app/actions/upload";
+import { logout } from "@/app/(auth)/login/actions";
 
 const AVATAR_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 const AVATAR_MAX_MB = 5;
+
+function formatFirstNameLastName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 2) return fullName;
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+}
 
 export function NavUser({
   user,
@@ -39,48 +48,99 @@ export function NavUser({
 }>) {
   const { isMobile } = useSidebar();
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [pendingImageSrc, setPendingImageSrc] = useState<string | null>(null);
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > AVATAR_MAX_MB * 1024 * 1024) {
-      alert(`Arquivo deve ter no máximo ${AVATAR_MAX_MB} MB.`);
-      e.target.value = "";
-      return;
-    }
+  function handleAvatarInteraction(e: React.MouseEvent | React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (uploading) return;
+    setImportModalOpen(true);
+  }
+
+  function handleFileSelected(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPendingImageSrc(reader.result as string);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleCropComplete(blob: Blob) {
     setUploading(true);
     const formData = new FormData();
-    formData.set("file", file);
+    formData.set("file", blob, "avatar.jpg");
     const result = await uploadAvatar(formData);
-    e.target.value = "";
     setUploading(false);
+    setPendingImageSrc(null);
     if (result.ok) router.refresh();
     else alert(result.error);
+  }
+
+  async function handleLogout() {
+    await logout();
   }
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
+        <AvatarImportModal
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          onFileSelected={handleFileSelected}
+        />
+        <AvatarCropModal
+          open={cropModalOpen}
+          onOpenChange={setCropModalOpen}
+          imageSrc={pendingImageSrc ?? ""}
+          onCropComplete={handleCropComplete}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg text-xs">
-                  {user.name.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs text-zinc-400">
-                  {user.email}
-                </span>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={handleAvatarInteraction}
+                onPointerDown={handleAvatarInteraction}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAvatarInteraction(e as unknown as React.MouseEvent);
+                  }
+                }}
+                className="relative group/avatar-edit shrink-0 rounded-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
+                aria-label="Alterar foto de perfil"
+              >
+                <Avatar className="h-8 w-8 rounded-full overflow-hidden">
+                  <AvatarImage
+                    src={user.avatar}
+                    alt={user.name}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="rounded-full text-xs">
+                    {user.name.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover/avatar-edit:opacity-100 transition-opacity">
+                  <Pencil className="h-4 w-4 text-white" />
+                </div>
+                {uploading && (
+                  <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                    <span className="text-xs text-white font-medium">...</span>
+                  </div>
+                )}
               </div>
+              <span className="flex-1 truncate text-left text-sm font-semibold">
+                {formatFirstNameLastName(user.name)}
+              </span>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
@@ -92,15 +152,21 @@ export function NavUser({
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg text-xs">
+                <Avatar className="h-8 w-8 rounded-full shrink-0 overflow-hidden">
+                  <AvatarImage
+                    src={user.avatar}
+                    alt={user.name}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="rounded-full text-xs">
                     {user.name.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
                   <span className="truncate font-semibold">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate text-xs text-zinc-400">
+                    {user.email}
+                  </span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -117,33 +183,19 @@ export function NavUser({
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Conta
               </DropdownMenuItem>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={AVATAR_ACCEPT}
-                className="hidden"
-                aria-label="Enviar foto de perfil"
-                onChange={handleAvatarChange}
-                disabled={uploading}
-              />
-              <DropdownMenuItem
-                className="focus:bg-zinc-800 cursor-pointer"
-                onSelect={(e) => {
-                  e.preventDefault();
-                  fileInputRef.current?.click();
-                }}
-                disabled={uploading}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {uploading ? "Enviando…" : "Alterar Foto"}
-              </DropdownMenuItem>
               <DropdownMenuItem className="focus:bg-zinc-800 cursor-pointer">
                 <Bell className="mr-2 h-4 w-4" />
                 Notificações
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-zinc-800" />
-            <DropdownMenuItem className="focus:bg-zinc-800 text-red-400 cursor-pointer">
+            <DropdownMenuItem
+              className="focus:bg-zinc-800 text-red-400 cursor-pointer"
+              onSelect={(e) => {
+                e.preventDefault();
+                handleLogout();
+              }}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Sair
             </DropdownMenuItem>

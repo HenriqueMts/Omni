@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, transactions } from "@/db/schema";
+import { accounts, categories, transactions } from "@/db/schema";
 
 export type ExtractedTransactionInput = {
   date: string;
@@ -41,11 +41,13 @@ export async function getOrCreateCategoryId(
   return created.id;
 }
 
-/** Insere transações extraídas pela IA na conta indicada; cria categorias se necessário. */
+/** Insere transações extraídas pela IA na conta indicada; cria categorias se necessário.
+ * Se closingBalance for informado, atualiza o saldo da conta para esse valor (saldo ao final do período do extrato). */
 export async function insertExtractedTransactions(
   userId: string,
   accountId: string,
   items: ExtractedTransactionInput[],
+  closingBalance: number | null = null,
 ): Promise<{ inserted: number; error?: string }> {
   if (items.length === 0) return { inserted: 0 };
   const values = await Promise.all(
@@ -64,5 +66,16 @@ export async function insertExtractedTransactions(
     }),
   );
   await db.insert(transactions).values(values);
+
+  if (closingBalance !== null && !Number.isNaN(closingBalance)) {
+    await db
+      .update(accounts)
+      .set({
+        balance: closingBalance.toFixed(2),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)));
+  }
+
   return { inserted: values.length };
 }

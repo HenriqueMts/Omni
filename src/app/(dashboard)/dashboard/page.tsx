@@ -8,9 +8,12 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { GreetingCard } from "@/components/dashboard/greeting-card";
+import { CashFlowChart } from "@/components/dashboard/cash-flow-chart";
+import { AISuggestionsCard } from "@/components/dashboard/ai-suggestions-card";
+import { ImportExtractsButton } from "@/components/dashboard/import-extracts-button";
 
 export default async function DashboardPage() {
-  const { income, expense, total, recentTransactions } =
+  const { income, expense, total, recentTransactions, chartData } =
     await getDashboardStats();
 
   const savings = income - expense;
@@ -19,38 +22,28 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb + período (estilo referência) */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Breadcrumb + Importar extratos */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in-up animate-opacity-0">
         <p className="text-sm text-zinc-500">Dashboard &gt; Visão Geral</p>
-        <div className="flex items-center gap-2">
-          <select className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50">
-            <option>Este mês</option>
-            <option>Este trimestre</option>
-            <option>Este ano</option>
-          </select>
-          <button
-            type="button"
-            className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
-          >
-            Exportar
-          </button>
-        </div>
+        <ImportExtractsButton />
       </div>
 
       {/* Título da seção */}
-      <div>
+      <div className="animate-fade-in-up animate-opacity-0 animate-delay-1">
         <h2 className="text-2xl font-bold text-zinc-100">Visão Geral</h2>
         <p className="text-zinc-500 mt-0.5">
           Acompanhe seus indicadores e movimentações
         </p>
       </div>
 
-      {/* Card de boas-vindas (estilo referência) */}
-      <GreetingCard userName="Eduardo Silva" />
+      {/* Card de boas-vindas */}
+      <div className="animate-fade-in-up animate-opacity-0 animate-delay-2">
+        <GreetingCard userName="Eduardo Silva" />
+      </div>
 
       {/* KPIs - 4 cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-zinc-900 border-zinc-800 animate-fade-in-up animate-opacity-0 animate-delay-3">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
               Saldo Total
@@ -67,7 +60,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-zinc-900 border-zinc-800 animate-fade-in-up animate-opacity-0 animate-delay-4">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
               Entradas
@@ -85,7 +78,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-zinc-900 border-zinc-800 animate-fade-in-up animate-opacity-0 animate-delay-5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
               Saídas
@@ -103,7 +96,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-zinc-900 border-zinc-800 animate-fade-in-up animate-opacity-0 animate-delay-6">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
               Economia do mês
@@ -124,9 +117,9 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Grid: Fluxo de Caixa + Recentes + Insights */}
+      {/* Grid: Fluxo de Caixa + Recentes + Sugestões IA */}
       <div className="grid gap-4 lg:grid-cols-7">
-        <Card className="lg:col-span-4 bg-zinc-900 border-zinc-800">
+        <Card className="lg:col-span-4 bg-zinc-900 border-zinc-800 animate-fade-in-up animate-opacity-0 animate-delay-7">
           <CardHeader>
             <CardTitle>Fluxo de Caixa</CardTitle>
             <p className="text-sm text-zinc-500">
@@ -134,13 +127,11 @@ export default async function DashboardPage() {
             </p>
           </CardHeader>
           <CardContent className="pl-2">
-            <div className="h-[200px] w-full flex items-center justify-center text-zinc-500 border border-dashed border-zinc-700 rounded-md">
-              Gráfico será implementado aqui
-            </div>
+            <CashFlowChart data={chartData ?? []} />
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-3 bg-zinc-900 border-zinc-800">
+        <Card className="lg:col-span-3 bg-zinc-900 border-zinc-800 animate-fade-in-up animate-opacity-0 animate-delay-8">
           <CardHeader>
             <CardTitle>Recentes</CardTitle>
             <p className="text-sm text-zinc-500">Últimas movimentações</p>
@@ -183,55 +174,8 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Insights (estilo referência - analytics) */}
-      <Card className="bg-zinc-900 border-zinc-800">
-        <CardHeader>
-          <CardTitle>Insights</CardTitle>
-          <p className="text-sm text-zinc-500">
-            Análise e sugestões (em breve com IA)
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-400">Controle de gastos</span>
-                <span className="text-zinc-100 font-medium">—</span>
-              </div>
-              <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-emerald-500/80"
-                  style={{ width: "0%" }}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-400">Meta de economia</span>
-                <span className="text-zinc-100 font-medium">—</span>
-              </div>
-              <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-emerald-500/80"
-                  style={{ width: "0%" }}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-400">Resposta da IA</span>
-                <span className="text-zinc-100 font-medium">Em breve</span>
-              </div>
-              <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-zinc-600"
-                  style={{ width: "100%" }}
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Sugestões de IA */}
+      <AISuggestionsCard />
     </div>
   );
 }

@@ -23,7 +23,7 @@ export function DashboardHeader() {
           />
         </div>
       </div>
-      <div className="flex items-center gap-1 ml-auto shrink-0">
+      <div className="flex items-center gap-2 ml-auto shrink-0">
         <ThemeToggle />
         <Button
           variant="ghost"

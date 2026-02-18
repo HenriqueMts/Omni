@@ -3,10 +3,13 @@ import { redirect } from "next/navigation";
 import { AppSidebar } from "../../components/dashboard/app-sidebar";
 import { DashboardHeader } from "../../components/dashboard/dashboard-header";
 import { AIChatPanel } from "../../components/dashboard/ai-chat-panel";
+import { ImportStatementModal } from "@/components/import/import-statement-modal";
 import { AIChatProvider } from "@/contexts/ai-chat-context";
+import { ImportStatementProvider } from "@/contexts/import-statement-context";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileById, ensureProfile } from "@/services/profile";
+import { getAccountsByUserId } from "@/services/accounts";
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient();
@@ -28,18 +31,23 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     avatar: profile?.avatarUrl ?? "",
   };
 
+  const accounts = await getAccountsByUserId(authUser.id);
+
   return (
     <AIChatProvider>
-      <SidebarProvider className="dark bg-zinc-950 text-zinc-50 overflow-hidden min-h-svh flex w-full">
-        <AppSidebar user={user} />
-        <SidebarInset>
-          <DashboardHeader />
-          <div className="flex-1 min-h-0 overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-zinc-800">
-            {children}
-          </div>
-        </SidebarInset>
-        <AIChatPanel />
-      </SidebarProvider>
+      <ImportStatementProvider>
+        <SidebarProvider className="dark bg-zinc-950 text-zinc-50 overflow-hidden min-h-svh flex w-full">
+          <AppSidebar user={user} />
+          <SidebarInset>
+            <DashboardHeader />
+            <div className="flex-1 min-h-0 overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-zinc-800">
+              {children}
+            </div>
+          </SidebarInset>
+          <AIChatPanel />
+          <ImportStatementModal accounts={accounts} />
+        </SidebarProvider>
+      </ImportStatementProvider>
     </AIChatProvider>
   );
 }

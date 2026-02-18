@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getAccountsByUserId } from "@/services/accounts";
 import { insertExtractedTransactions } from "@/services/transactions";
 
-const DOCUMENTS_BUCKET = "documents";
 const DOCUMENTS_MAX_BYTES = 10 * 1024 * 1024; // 10MB
 const DOCUMENTS_MIMES = [
   "application/pdf",
@@ -26,59 +25,147 @@ export type ExtractedTransaction = {
 };
 
 export type UploadAndProcessResult =
-  | { ok: true; path: string; transactions: ExtractedTransaction[] }
+  | { ok: true; transactions: ExtractedTransaction[]; closingBalance: number | null }
   | { ok: false; error: string };
 
 const EXTRACTION_PROMPT = `Você é um analista financeiro especialista em conversão de dados.
-Analise o texto bruto deste extrato bancário abaixo e extraia todas as transações financeiras.
+Analise o texto bruto deste extrato bancário abaixo e extraia:
 
-Regras:
-1. Ignore linhas que não sejam transações (cabeçalhos, saldos parciais, rodapés).
+1. TODAS as transações financeiras
+2. O SALDO ao final do período (saldo final, saldo em conta, saldo disponível, etc.) - geralmente aparece no fim do extrato
+
+Regras para transações:
+1. Ignore linhas que não sejam transações (cabeçalhos, rodapés).
 2. Sugira a Categoria pela descrição (ex: 'Uber' -> 'Transporte', 'Mcdonalds' -> 'Alimentação').
 3. O campo 'type' deve ser apenas 'income' (entradas/depósitos) ou 'expense' (saídas/gastos).
 4. Valores em número (ex: 1250.00). Se for negativo no extrato, use valor positivo e type 'expense'.
 5. Data no formato ISO YYYY-MM-DD. Use o ano atual se não estiver explícito.
 
-Retorne APENAS um array JSON com esta estrutura exata (sem texto antes ou depois):
-[
-  { "date": "YYYY-MM-DD", "description": "Descrição", "amount": 100.00, "type": "expense", "category": "Categoria" }
-]
+Regras para saldo final:
+- Procure por "Saldo final", "Saldo em conta", "Saldo disponível", "Saldo" no fim do extrato.
+- Use valor numérico (positivo ou negativo conforme o extrato). Ex: -150.50
+- Se não encontrar saldo explícito, calcule: último saldo conhecido +/- transações até a última data.
+- Se realmente não for possível determinar, use null para closingBalance.
+
+Retorne um objeto JSON com esta estrutura exata (sem texto antes ou depois):
+{
+  "transactions": [
+    { "date": "YYYY-MM-DD", "description": "Descrição", "amount": 100.00, "type": "expense", "category": "Categoria" }
+  ],
+  "closingBalance": 1234.56
+}
+
+Use closingBalance: null se não conseguir identificar o saldo.
 
 --- DADOS DO EXTRATO ---
 `;
 
-async function extractTextFromFile(file: File): Promise<string> {
+async function extractTextFromPdf(
+  data: Uint8Array,
+  password?: string | null,
+): Promise<string> {
+  const path = await import("node:path");
+  const { pathToFileURL } = await import("node:url");
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const workerPath = path.join(
+    process.cwd(),
+    "node_modules",
+    "pdfjs-dist",
+    "legacy",
+    "build",
+    "pdf.worker.mjs",
+  );
+  pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(workerPath).href;
+  const loadingTask = pdfjs.getDocument({
+    data,
+    password: password && password.trim() ? password : undefined,
+    useWorkerFetch: false,
+  });
+  const pdf = await loadingTask.promise;
+  const numPages = pdf.numPages;
+  const texts: string[] = [];
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join("");
+    texts.push(pageText);
+  }
+  pdf.destroy();
+  return texts.join("\n\n");
+}
+
+async function extractTextFromFile(
+  file: File,
+  password?: string | null,
+): Promise<string> {
   if (file.type === "application/pdf") {
-    const pdfParse = (await import("pdf-parse")).default as (
-      buffer: Buffer,
-    ) => Promise<{ text: string }>;
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const data = await pdfParse(buffer);
-    return data.text ?? "";
+    const data = new Uint8Array(arrayBuffer);
+    return extractTextFromPdf(data, password);
   }
   return file.text();
 }
 
-function parseTransactionsFromJson(jsonString: string): ExtractedTransaction[] {
+type ExtractionResult = {
+  transactions: ExtractedTransaction[];
+  closingBalance: number | null;
+};
+
+function parseExtractionResult(jsonString: string): ExtractionResult {
   const parsed = JSON.parse(jsonString);
-  if (!Array.isArray(parsed)) return [];
-  return parsed.filter(
-    (t: unknown): t is ExtractedTransaction =>
-      t !== null &&
-      typeof t === "object" &&
-      "date" in t &&
-      "description" in t &&
-      "amount" in t &&
-      "type" in t &&
-      "category" in t,
-  );
+  const transactions: ExtractedTransaction[] = [];
+  let closingBalance: number | null = null;
+
+  if (Array.isArray(parsed)) {
+    // formato antigo: só array
+    parsed.forEach((t: unknown) => {
+      if (
+        t !== null &&
+        typeof t === "object" &&
+        "date" in t &&
+        "description" in t &&
+        "amount" in t &&
+        "type" in t &&
+        "category" in t
+      ) {
+        transactions.push(t as ExtractedTransaction);
+      }
+    });
+  } else if (parsed && typeof parsed === "object") {
+    const list = parsed.transactions ?? parsed.data ?? [];
+    if (Array.isArray(list)) {
+      list.forEach((t: unknown) => {
+        if (
+          t !== null &&
+          typeof t === "object" &&
+          "date" in t &&
+          "description" in t &&
+          "amount" in t &&
+          "type" in t &&
+          "category" in t
+        ) {
+          transactions.push(t as ExtractedTransaction);
+        }
+      });
+    }
+    const cb = parsed.closingBalance;
+    if (typeof cb === "number" && !Number.isNaN(cb)) {
+      closingBalance = cb;
+    } else if (typeof cb === "string" && cb.trim() !== "") {
+      const n = parseFloat(cb.replace(",", "."));
+      if (!Number.isNaN(n)) closingBalance = n;
+    }
+  }
+
+  return { transactions, closingBalance };
 }
 
 /** Usa Groq (preferido) ou Gemini para extrair transações do texto. */
 async function extractTransactionsWithAI(
   textContent: string,
-): Promise<{ transactions: ExtractedTransaction[]; error?: string }> {
+): Promise<{ transactions: ExtractedTransaction[]; closingBalance: number | null; error?: string }> {
   const groqKey = process.env.GROQ_API_KEY;
   const geminiKey =
     process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GEMINI_API_KEY;
@@ -103,28 +190,13 @@ async function extractTransactionsWithAI(
         response_format: { type: "json_object" },
       });
       const content = completion.choices[0]?.message?.content;
-      if (!content) return { transactions: [], error: "Resposta vazia do Groq" };
-      const parsed = JSON.parse(content);
-      const list = Array.isArray(parsed)
-        ? parsed
-        : parsed.transactions ?? parsed.data ?? [];
-      const transactions = Array.isArray(list)
-        ? list.filter(
-            (t: unknown): t is ExtractedTransaction =>
-              t !== null &&
-              typeof t === "object" &&
-              "date" in t &&
-              "description" in t &&
-              "amount" in t &&
-              "type" in t &&
-              "category" in t,
-          )
-        : [];
-      return { transactions };
+      if (!content) return { transactions: [], closingBalance: null, error: "Resposta vazia do Groq" };
+      const { transactions, closingBalance } = parseExtractionResult(content);
+      return { transactions, closingBalance };
     } catch (e) {
       console.error("Erro Groq:", e);
       const msg = e instanceof Error ? e.message : String(e);
-      return { transactions: [], error: msg };
+      return { transactions: [], closingBalance: null, error: msg };
     }
   }
 
@@ -142,17 +214,18 @@ async function extractTransactionsWithAI(
       );
       const result = await model.generateContent(EXTRACTION_PROMPT + textContent.slice(0, 120000));
       const jsonString = result.response.text();
-      const transactions = parseTransactionsFromJson(jsonString);
-      return { transactions };
+      const { transactions, closingBalance } = parseExtractionResult(jsonString);
+      return { transactions, closingBalance };
     } catch (e) {
       console.error("Erro Gemini:", e);
       const msg = e instanceof Error ? e.message : String(e);
-      return { transactions: [], error: msg };
+      return { transactions: [], closingBalance: null, error: msg };
     }
   }
 
   return {
     transactions: [],
+    closingBalance: null,
     error:
       "Nenhum provedor de IA configurado. Defina GROQ_API_KEY (recomendado) ou GOOGLE_GENERATIVE_AI_API_KEY no .env.local",
   };
@@ -169,6 +242,7 @@ export async function uploadAndProcessStatement(
     if (!user) return { ok: false, error: "Não autenticado" };
 
     const file = formData.get("file") as File | null;
+    const pdfPassword = (formData.get("pdfPassword") as string) || null;
     if (!file?.size) return { ok: false, error: "Nenhum arquivo enviado" };
     if (file.size > DOCUMENTS_MAX_BYTES) {
       return { ok: false, error: "Arquivo maior que 10 MB" };
@@ -183,36 +257,35 @@ export async function uploadAndProcessStatement(
       return { ok: false, error: "Formato inválido. Use PDF, TXT ou OFX." };
     }
 
-    // 1. Extrair texto
-    const textContent = await extractTextFromFile(file);
+    // 1. Extrair texto (com senha se PDF protegido)
+    const textContent = await extractTextFromFile(file, pdfPassword);
     if (!textContent.trim()) {
       return { ok: false, error: "Não foi possível extrair texto do arquivo." };
     }
 
-    // 2. IA (Groq preferido, senão Gemini)
-    const { transactions, error: aiError } = await extractTransactionsWithAI(textContent);
+    // 2. IA (Groq preferido, senão Gemini) — usa o texto só para extração; não salva o arquivo no storage
+    const { transactions, closingBalance, error: aiError } = await extractTransactionsWithAI(textContent);
     if (aiError && transactions.length === 0) {
       return { ok: false, error: aiError };
     }
 
-    // 3. Upload do arquivo para o storage
-    const safeName = file.name.replaceAll(/[^a-zA-Z0-9._-]/g, "_").slice(0, 100);
-    const path = `${user.id}/${safeName}`;
-    const { error: uploadError } = await supabase.storage
-      .from(DOCUMENTS_BUCKET)
-      .upload(path, file, { upsert: false });
-
-    if (uploadError) {
-      return {
-        ok: false,
-        error: `Extração concluída, mas falha ao salvar arquivo: ${uploadError.message}`,
-      };
-    }
-
     revalidatePath("/dashboard/import", "layout");
-    return { ok: true, path, transactions };
+    return { ok: true, transactions, closingBalance: closingBalance ?? null };
   } catch (err) {
     console.error("Erro ao processar extrato:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (
+      msg.includes("password") ||
+      msg.includes("senha") ||
+      msg.includes("Password") ||
+      msg.includes("NEED_PASSWORD")
+    ) {
+      return {
+        ok: false,
+        error:
+          "PDF protegido por senha. Ative a opção e informe a senha correta.",
+      };
+    }
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Falha ao processar o arquivo com IA.",
@@ -228,6 +301,7 @@ export type ImportExtractedResult =
 export async function importExtractedTransactions(
   accountId: string,
   transactionsToImport: ExtractedTransaction[],
+  closingBalance: number | null = null,
 ): Promise<ImportExtractedResult> {
   try {
     const supabase = await createClient();
@@ -248,6 +322,7 @@ export async function importExtractedTransactions(
       user.id,
       accountId,
       transactionsToImport,
+      closingBalance,
     );
     if (error) return { ok: false, error };
 

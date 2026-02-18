@@ -9,7 +9,6 @@ import {
   Settings,
   LifeBuoy,
   Bot,
-  Upload,
 } from "lucide-react";
 
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -31,6 +30,7 @@ import { useAIChat } from "@/contexts/ai-chat-context";
 
 const navMain = [
     { title: "Visão Geral", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Contas", url: "/dashboard/accounts", icon: Wallet },
     {
       title: "Assistente IA",
       url: "#",
@@ -42,12 +42,6 @@ const navMain = [
       url: "/dashboard/transactions",
       icon: ArrowRightLeft,
     },
-    {
-      title: "Importar extrato",
-      url: "/dashboard/import",
-      icon: Upload,
-    },
-    { title: "Contas", url: "/dashboard/accounts", icon: Wallet },
     { title: "Relatórios", url: "/dashboard/reports", icon: PieChart },
   ];
 const navSecondary = [
