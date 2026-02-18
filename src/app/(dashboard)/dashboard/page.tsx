@@ -156,7 +156,7 @@ export default async function DashboardPage() {
                   </div>
                   <div className="flex-1 space-y-1 min-w-0">
                     <p className="text-sm font-medium leading-none text-zinc-200 truncate">
-                      {t.description}
+                      {t.description ?? "—"}
                     </p>
                     <p className="text-xs text-zinc-500">
                       {new Date(t.date).toLocaleDateString("pt-BR")}

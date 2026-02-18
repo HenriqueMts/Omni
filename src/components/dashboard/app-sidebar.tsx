@@ -9,6 +9,7 @@ import {
   Settings,
   LifeBuoy,
   Bot,
+  Upload,
 } from "lucide-react";
 
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -28,14 +29,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAIChat } from "@/contexts/ai-chat-context";
 
-// Dados Mockados (Depois virão do Supabase)
-const data = {
-  user: {
-    name: "Eduardo Silva",
-    email: "eduardo@finance.ai",
-    avatar: "https://github.com/shadcn.png", // Placeholder
-  },
-  navMain: [
+const navMain = [
     { title: "Visão Geral", url: "/dashboard", icon: LayoutDashboard },
     {
       title: "Assistente IA",
@@ -48,24 +42,32 @@ const data = {
       url: "/dashboard/transactions",
       icon: ArrowRightLeft,
     },
+    {
+      title: "Importar extrato",
+      url: "/dashboard/import",
+      icon: Upload,
+    },
     { title: "Contas", url: "/dashboard/accounts", icon: Wallet },
     { title: "Relatórios", url: "/dashboard/reports", icon: PieChart },
-  ],
-  navSecondary: [
-    { title: "Configurações", url: "/dashboard/settings", icon: Settings },
-    { title: "Ajuda", url: "/help", icon: LifeBuoy },
-  ],
-};
+  ];
+const navSecondary = [
+  { title: "Configurações", url: "/dashboard/settings", icon: Settings },
+  { title: "Ajuda", url: "/help", icon: LifeBuoy },
+];
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+type SidebarUser = { id: string; name: string; email: string; avatar: string };
+
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { user: SidebarUser }) {
   const pathname = usePathname();
   const { setOpen: setChatOpen } = useAIChat();
 
   return (
     <Sidebar collapsible="icon" {...props} className="border-r-zinc-800">
-      {/* 1. CABEÇALHO COM USUÁRIO (NO TOPO COMO PEDIDO) */}
       <SidebarHeader>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarHeader>
 
       <SidebarContent>
@@ -73,7 +75,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
           <SidebarMenu>
-            {data.navMain.map((item) => {
+            {navMain.map((item) => {
               const isChat = "isChat" in item && item.isChat;
               const isActive = !isChat && pathname === item.url;
               if (isChat) {
@@ -113,7 +115,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup className="mt-auto">
           <SidebarGroupLabel>Suporte</SidebarGroupLabel>
           <SidebarMenu>
-            {data.navSecondary.map((item) => (
+            {navSecondary.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   asChild

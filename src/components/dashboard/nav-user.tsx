@@ -1,10 +1,11 @@
 "use client";
 
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
-  CreditCard,
   LogOut,
   Sparkles,
   Upload,
@@ -26,18 +27,38 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { uploadAvatar } from "@/app/actions/upload";
 
-// Receberemos os dados do usuário via props (viremos do Supabase depois)
+const AVATAR_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
+const AVATAR_MAX_MB = 5;
+
 export function NavUser({
   user,
-}: {
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-  };
-}) {
+}: Readonly<{
+  user: { id: string; name: string; email: string; avatar: string };
+}>) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > AVATAR_MAX_MB * 1024 * 1024) {
+      alert(`Arquivo deve ter no máximo ${AVATAR_MAX_MB} MB.`);
+      e.target.value = "";
+      return;
+    }
+    setUploading(true);
+    const formData = new FormData();
+    formData.set("file", file);
+    const result = await uploadAvatar(formData);
+    e.target.value = "";
+    setUploading(false);
+    if (result.ok) router.refresh();
+    else alert(result.error);
+  }
 
   return (
     <SidebarMenu>
@@ -50,7 +71,9 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">EH</AvatarFallback>
+                <AvatarFallback className="rounded-lg text-xs">
+                  {user.name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{user.name}</span>
@@ -71,7 +94,9 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">EH</AvatarFallback>
+                  <AvatarFallback className="rounded-lg text-xs">
+                    {user.name.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{user.name}</span>
@@ -92,10 +117,25 @@ export function NavUser({
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Conta
               </DropdownMenuItem>
-              {/* AQUI ENTRARÁ O UPLOAD NO FUTURO */}
-              <DropdownMenuItem className="focus:bg-zinc-800 cursor-pointer">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={AVATAR_ACCEPT}
+                className="hidden"
+                aria-label="Enviar foto de perfil"
+                onChange={handleAvatarChange}
+                disabled={uploading}
+              />
+              <DropdownMenuItem
+                className="focus:bg-zinc-800 cursor-pointer"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }}
+                disabled={uploading}
+              >
                 <Upload className="mr-2 h-4 w-4" />
-                Alterar Foto
+                {uploading ? "Enviando…" : "Alterar Foto"}
               </DropdownMenuItem>
               <DropdownMenuItem className="focus:bg-zinc-800 cursor-pointer">
                 <Bell className="mr-2 h-4 w-4" />

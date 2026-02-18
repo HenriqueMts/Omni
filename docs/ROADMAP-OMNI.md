@@ -6,8 +6,11 @@ App de finanças que centraliza todas as finanças, com Open Finance, IA para re
 
 ## Base atual (onde estamos)
 
-- **Stack:** Next.js 16, Supabase (auth + DB), Tailwind, shadcn/ui.
-- **Dashboard:** Cards de Saldo Total, Entradas, Saídas; placeholder de Fluxo de Caixa; lista de transações recentes (dados do Supabase).
+- **Stack:** Next.js 16, Supabase (auth + DB), Drizzle ORM, Tailwind, shadcn/ui.
+- **Schema:** Drizzle em `src/db/schema.ts` (profiles, accounts, categories, transactions). Use `DATABASE_URL` (connection string direta do Supabase) para `db` e `drizzle-kit`.
+- **Drizzle:** `npm run db:generate` (gera migrations), `npm run db:push` (aplica schema), `npm run db:studio` (UI). Em código: `import { db, getDb } from "@/db"` e `import { transactions, accounts, ... } from "@/db/schema"`.
+- **Dashboard:** Cards de Saldo Total, Entradas, Saídas; placeholder de Fluxo de Caixa; lista de transações recentes (dados via **Drizzle**).
+- **Contas (Fase 2.2):** Página `/dashboard/accounts` com listagem, criação, edição e exclusão de contas (nome, tipo, saldo inicial, cor).
 - **Navegação:** Sidebar com Visão Geral, Transações, Contas, Relatórios, Configurações, Ajuda.
 - **Auth:** Login com Supabase.
 
