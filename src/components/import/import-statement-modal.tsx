@@ -65,8 +65,8 @@ export function ImportStatementModal({ accounts }: Props) {
     <>
       {/* Modal pequeno: conta, arquivo, senha */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[90vw] max-w-[40vw] max-h-[min(420px,85vh)] flex flex-col overflow-hidden border-zinc-800 bg-zinc-900 text-zinc-50 p-0 gap-0 [&>button]:top-4 [&>button]:right-4 [&>button]:z-10">
-          <DialogHeader className="shrink-0 border-b border-zinc-800 px-6 py-3 text-left">
+        <DialogContent className="w-[95vw] h-[95dvh] max-h-[95dvh] sm:w-auto sm:h-auto sm:max-w-[40vw] sm:max-h-[min(420px,85vh)] flex flex-col overflow-hidden border-zinc-800 bg-zinc-900 text-zinc-50 p-0 gap-0 [&>button]:top-4 [&>button]:right-4 [&>button]:z-10">
+          <DialogHeader className="shrink-0 border-b border-zinc-800 px-4 sm:px-6 py-3 text-left">
             <DialogTitle className="text-zinc-100">Importar extrato</DialogTitle>
             <DialogDescription className="text-zinc-400 text-sm">
               {hasAccounts
@@ -74,7 +74,7 @@ export function ImportStatementModal({ accounts }: Props) {
                 : "Cadastre uma conta para poder importar extratos."}
             </DialogDescription>
           </DialogHeader>
-          <div ref={modalContentRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-4 scrollbar-dark-translucent">
+          <div ref={modalContentRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4 pb-[min(40vh,280px)] scrollbar-dark-translucent">
             {hasAccounts ? (
               <StatementUploadForm
                 accounts={accounts}

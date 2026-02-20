@@ -194,15 +194,24 @@ export async function getReportsData(userId: string): Promise<ReportsData> {
     type: t.type,
   }));
 
-  const invoices = await getInvoicesByUserId(userId, startStr, endStr);
-  const creditCardInvoices = {
-    totalAmount: invoices.reduce((acc, i) => acc + Number(i.totalAmount), 0),
-    count: invoices.length,
-    invoices: invoices.map((i) => ({
-      periodEnd: i.periodEnd,
-      totalAmount: i.totalAmount,
-    })),
+  let creditCardInvoices = {
+    totalAmount: 0,
+    count: 0,
+    invoices: [] as { periodEnd: string; totalAmount: string }[],
   };
+  try {
+    const invoices = await getInvoicesByUserId(userId, startStr, endStr);
+    creditCardInvoices = {
+      totalAmount: invoices.reduce((acc, i) => acc + Number(i.totalAmount), 0),
+      count: invoices.length,
+      invoices: invoices.map((i) => ({
+        periodEnd: i.periodEnd,
+        totalAmount: i.totalAmount,
+      })),
+    };
+  } catch {
+    // Tabela credit_card_invoices pode não existir ou falhar; relatórios seguem sem faturas
+  }
 
   return {
     revenue,

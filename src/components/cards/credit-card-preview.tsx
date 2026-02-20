@@ -46,21 +46,23 @@ export function CreditCardPreview({
       )}
     >
       {/* Chip EMV (metálico) */}
-      <div className="absolute top-14 left-5 w-11 h-8 rounded-[6px] bg-gradient-to-br from-zinc-400 to-zinc-500 border border-zinc-600/80 shadow-inner" />
-      {/* Número mascarado */}
+      <div className="absolute top-3 left-3 sm:top-4 sm:left-5 w-9 h-6 sm:w-11 sm:h-8 rounded-[5px] sm:rounded-[6px] bg-gradient-to-br from-zinc-400 to-zinc-500 border border-zinc-600/80 shadow-inner" />
+      {/* Número mascarado — dentro do cartão, sem sobrepor */}
       <div
         className={cn(
-          "absolute bottom-14 left-5 right-5 font-mono text-lg sm:text-xl tracking-[0.2em]",
+          "absolute left-3 right-3 sm:left-5 sm:right-5 font-mono tracking-[0.15em] sm:tracking-[0.2em] truncate",
+          "text-sm sm:text-lg md:text-xl leading-tight",
+          "bottom-10 sm:bottom-14",
           isLight ? "text-zinc-800/90" : "text-white/95",
         )}
       >
         {maskLast4(last4)}
       </div>
-      {/* Nome */}
-      <div className="absolute bottom-4 left-5 right-5">
+      {/* Nome — fixo na base, uma linha, sem sobrepor o número */}
+      <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-5 sm:right-5">
         <span
           className={cn(
-            "text-sm sm:text-base uppercase tracking-wider truncate block",
+            "text-xs sm:text-sm md:text-base uppercase tracking-wider truncate block max-w-full",
             isLight ? "text-zinc-800/90 font-medium" : "text-white/90",
           )}
         >
