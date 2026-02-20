@@ -15,10 +15,12 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
-    "@google/generative-ai": "^0.24.1",
+    "@react-three/fiber": "^9.5.0",
+    "@shadergradient/react": "^2.4.20",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.96.0",
     "@tanstack/react-table": "^8.21.3",
+    "camera-controls": "^3.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -39,6 +41,8 @@
     "recharts": "^3.7.0",
     "tailwind-merge": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
+    "three": "^0.183.0",
+    "three-stdlib": "^2.36.1",
     "vaul": "^1.1.2"
   },
   "devDependencies": {
@@ -47,6 +51,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.183.0",
     "babel-plugin-react-compiler": "1.0.0",
     "drizzle-kit": "^0.31.9",
     "eslint": "^9",

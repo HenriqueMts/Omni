@@ -16,10 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createAccount } from "@/app/actions/accounts";
-import { CreditCard, Landmark, TrendingUp } from "lucide-react";
+import { Landmark, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type AccountKind = "checking" | "investment" | "credit_card";
+type AccountKind = "checking" | "investment";
 
 type Props = {
   open: boolean;
@@ -79,7 +79,6 @@ export function AccountCreateModal({ open, onOpenChange }: Props) {
 
   const isAccount = kind === "checking";
   const isInvestment = kind === "investment";
-  const isCard = kind === "credit_card";
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -97,18 +96,14 @@ export function AccountCreateModal({ open, onOpenChange }: Props) {
             ? "O que deseja cadastrar?"
             : isAccount
               ? "Nova conta bancária"
-              : isInvestment
-                ? "Nova conta de investimento"
-                : "Novo cartão"}
+              : "Nova conta de investimento"}
           </DialogTitle>
           <DialogDescription className="text-zinc-400">
             {step === 1
               ? "Escolha o tipo para continuar"
               : isAccount
                 ? "Adicione os dados da conta bancária"
-                : isInvestment
-                  ? "Adicione os dados da conta de investimento"
-                  : "Adicione os dados do cartão de crédito"}
+                : "Adicione os dados da conta de investimento"}
           </DialogDescription>
         </DialogHeader>
 
@@ -154,26 +149,6 @@ export function AccountCreateModal({ open, onOpenChange }: Props) {
                 <span className="font-medium">Conta de investimento</span>
               </CardContent>
             </Card>
-            <Card
-              className={cn(
-                "cursor-pointer transition-all duration-200 border-2",
-                kind === "credit_card"
-                  ? "border-emerald-500/60 bg-emerald-500/5"
-                  : "border-zinc-800 hover:border-zinc-700 bg-zinc-950/50"
-              )}
-              onClick={() => handleKindSelect("credit_card")}
-            >
-              <CardContent className="flex items-center gap-3 p-4">
-                <Checkbox
-                  checked={kind === "credit_card"}
-                  onCheckedChange={() => handleKindSelect("credit_card")}
-                  onClick={(e) => e.stopPropagation()}
-                  className="border-zinc-600 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
-                />
-                <CreditCard className="h-5 w-5 text-zinc-400 shrink-0" />
-                <span className="font-medium">Cartão de crédito</span>
-              </CardContent>
-            </Card>
             {error && (
               <p className="text-sm text-red-500">{error}</p>
             )}
@@ -189,7 +164,7 @@ export function AccountCreateModal({ open, onOpenChange }: Props) {
             <input type="hidden" name="color" value="#3f3f46" />
             <div className="space-y-2 animate-in fade-in-50 slide-in-from-bottom-2 duration-200">
               <Label htmlFor="name" className="text-zinc-300">
-                {isCard ? "Nome do cartão" : "Nome da conta"}
+                Nome da conta
               </Label>
               <Input
                 id="name"
@@ -197,9 +172,7 @@ export function AccountCreateModal({ open, onOpenChange }: Props) {
                 placeholder={
                   isAccount
                     ? "Ex: Nubank, Banco do Brasil"
-                    : isInvestment
-                      ? "Ex: XP, Nuinvest"
-                      : "Ex: Nubank, Visa"
+                    : "Ex: XP, Nuinvest"
                 }
                 required
                 className="bg-zinc-950 border-zinc-700 text-zinc-100"

@@ -16,16 +16,121 @@ import {
   ComboboxCollection,
   ComboboxEmpty,
 } from "@/components/ui/combobox";
-import { uploadAndProcessStatement, importExtractedTransactions } from "@/app/actions/process-statement";
-import type { ExtractedTransaction } from "@/app/actions/process-statement";
+import {
+  uploadAndProcessStatement,
+  importExtractedTransactions,
+  analyzeTransfersBetweenOwnAccounts,
+} from "@/app/actions/process-statement";
+import type {
+  ExtractedTransaction,
+  AnalyzeTransfersResult,
+  InternalTransferPair,
+} from "@/app/actions/process-statement";
 import type { Account } from "@/db/schema";
 import { getTransactionTypeLabel } from "@/lib/transaction-types";
 import { useLocale } from "@/lib/use-locale";
-import { FileText, Upload, Loader2, Check } from "lucide-react";
+import { FileText, Upload, Loader2, Check, ArrowRightLeft, X } from "lucide-react";
 
 const ACCEPT =
   ".pdf,.txt,.ofx,application/pdf,text/plain,application/x-ofx,text/ofx";
 const MAX_MB = 10;
+
+function TransferAnalysisCard({
+  result,
+  onDismiss,
+}: {
+  result: AnalyzeTransfersResult;
+  onDismiss: () => void;
+}) {
+  if (!result.ok) {
+    return (
+      <Card className="bg-zinc-900 border-zinc-800 border-red-500/30">
+        <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+          <div className="flex items-center gap-2">
+            <ArrowRightLeft className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-zinc-100 text-base">Análise de transferências</CardTitle>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500" onClick={onDismiss}>
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-red-500">{result.error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  if ("skipped" in result && result.skipped) {
+    return (
+      <Card className="bg-zinc-900 border-zinc-800 border-amber-500/20">
+        <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+          <div className="flex items-center gap-2">
+            <ArrowRightLeft className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-zinc-100 text-base">Análise de transferências</CardTitle>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500" onClick={onDismiss}>
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-zinc-400">{result.reason}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  if (!("analysis" in result)) return null;
+  const { summary, pairs } = result.analysis;
+  return (
+    <Card className="bg-zinc-900 border-zinc-800 border-amber-500/20">
+      <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+        <div className="flex items-center gap-2">
+          <ArrowRightLeft className="h-5 w-5 text-amber-500" />
+          <CardTitle className="text-zinc-100 text-base">Transferências entre suas contas</CardTitle>
+        </div>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500" onClick={onDismiss}>
+          <X className="h-4 w-4" />
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-zinc-300">{summary}</p>
+        {pairs.length > 0 && (
+          <>
+            <p className="text-xs text-amber-500/90">
+              Essas movimentações não entram no somatório de receitas e despesas.
+            </p>
+            <div className="rounded-lg border border-zinc-800 overflow-x-auto">
+              <table className="w-full min-w-[500px] text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800 bg-zinc-950/50">
+                    <th className="text-left py-2 px-3 text-zinc-500 font-medium">Data</th>
+                    <th className="text-left py-2 px-3 text-zinc-500 font-medium">Conta saída</th>
+                    <th className="text-left py-2 px-3 text-zinc-500 font-medium">Conta entrada</th>
+                    <th className="text-right py-2 px-3 text-zinc-500 font-medium">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pairs.map((p: InternalTransferPair) => (
+                    <tr
+                      key={`${p.date}-${p.accountOut}-${p.accountIn}-${p.amount}`}
+                      className="border-b border-zinc-800/80"
+                    >
+                      <td className="py-2 px-3 text-zinc-400">{p.date}</td>
+                      <td className="py-2 px-3 text-zinc-300" title={p.descriptionOut}>{p.accountOut}</td>
+                      <td className="py-2 px-3 text-zinc-300" title={p.descriptionIn}>{p.accountIn}</td>
+                      <td className="py-2 px-3 text-right font-medium text-zinc-200">
+                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(p.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 type Props = Readonly<{
   accounts: Account[];
@@ -48,6 +153,8 @@ export function StatementUploadCard({ accounts, comboboxContainerRef }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<ExtractedTransaction[] | null>(null);
   const [closingBalance, setClosingBalance] = useState<number | null>(null);
+  const [analyzingTransfers, setAnalyzingTransfers] = useState(false);
+  const [transferAnalysis, setTransferAnalysis] = useState<AnalyzeTransfersResult | null>(null);
 
   const accountItems = accounts.map((a) => ({
     value: a.id,
@@ -116,9 +223,18 @@ export function StatementUploadCard({ accounts, comboboxContainerRef }: Props) {
       setClosingBalance(null);
       setSelectedFile(null);
       setPdfPassword("");
+      setTransferAnalysis(null);
+      setAnalyzingTransfers(true);
+      const analysisResult = await analyzeTransfersBetweenOwnAccounts();
+      setAnalyzingTransfers(false);
+      setTransferAnalysis(analysisResult);
     } else {
       setError(result.error);
     }
+  }
+
+  function dismissTransferAnalysis() {
+    setTransferAnalysis(null);
   }
 
   function handleVoltarTransacoes() {
@@ -210,8 +326,26 @@ export function StatementUploadCard({ accounts, comboboxContainerRef }: Props) {
     );
   }
 
+  const showTransferAnalysis = transferAnalysis && !analyzingTransfers;
+
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-300">
+      {analyzingTransfers && (
+        <Card className="bg-zinc-900 border-zinc-800 border-amber-500/30">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+            <p className="text-zinc-300 text-sm">
+              Analisando transferências entre suas contas…
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      {showTransferAnalysis && !analyzingTransfers && (
+        <TransferAnalysisCard
+          result={transferAnalysis}
+          onDismiss={dismissTransferAnalysis}
+        />
+      )}
       <Card className="bg-zinc-900 border-zinc-800">
         <CardHeader>
           <CardTitle className="text-zinc-100 flex items-center gap-2">

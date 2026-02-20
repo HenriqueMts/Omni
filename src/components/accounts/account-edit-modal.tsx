@@ -25,11 +25,11 @@ import { updateAccount } from "@/app/actions/accounts";
 import type { Account } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-const ACCOUNT_TYPES = [
+const ACCOUNT_TYPES: { value: string; label: string }[] = [
   { value: "checking", label: "Conta bancária" },
   { value: "investment", label: "Conta de investimento" },
   { value: "credit_card", label: "Cartão de crédito" },
-] as const;
+];
 
 type Props = Readonly<{
   account: Account | null;
@@ -118,7 +118,7 @@ export function AccountEditModal({ account, open, onOpenChange }: Props) {
             </Label>
             <Combobox
               items={ACCOUNT_TYPES}
-              value={ACCOUNT_TYPES.find((t) => t.value === accountType) ?? null}
+              value={ACCOUNT_TYPES.find((t) => t.value === accountType) ?? ACCOUNT_TYPES[0]}
               onValueChange={(v) => v != null && setAccountType(v.value)}
               itemToStringValue={(item) => item.label}
             >

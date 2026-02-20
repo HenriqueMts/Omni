@@ -2,13 +2,12 @@
 
 import { Search, Bell } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function DashboardHeader() {
   return (
-    <header className="flex h-16 items-center gap-4 border-b border-zinc-800 px-4 md:px-6 bg-zinc-950/50 backdrop-blur-xl z-10">
+    <header className=" box-border flex h-16 items-center gap-4 border-b border-zinc-800 px-4 md:px-6 bg-zinc-950/50 backdrop-blur-xl z-10">
       <SidebarTrigger className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 shrink-0" />
       <h1 className="text-lg font-semibold text-zinc-100 shrink-0 hidden sm:block">
         Visão Geral
@@ -24,7 +23,6 @@ export function DashboardHeader() {
         </div>
       </div>
       <div className="flex items-center gap-2 ml-auto shrink-0">
-        <ThemeToggle />
         <Button
           variant="ghost"
           size="icon"

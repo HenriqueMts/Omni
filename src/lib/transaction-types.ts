@@ -2,12 +2,12 @@
 const LABELS: Record<string, Record<string, string>> = {
   pt: {
     income: "Entrada",
-    expense: "Despesa",
+    expense: "Saída",
     transfer: "Transferência",
   },
   "pt-BR": {
     income: "Entrada",
-    expense: "Despesa",
+    expense: "Saída",
     transfer: "Transferência",
   },
   en: {

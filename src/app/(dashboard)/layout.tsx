@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppSidebar } from "../../components/dashboard/app-sidebar";
 import { DashboardHeader } from "../../components/dashboard/dashboard-header";
 import { AIChatPanel } from "../../components/dashboard/ai-chat-panel";
+import { FloatingAIOrb } from "../../components/dashboard/floating-ai-orb";
 import { ImportStatementModal } from "@/components/import/import-statement-modal";
 import { AIChatProvider } from "@/contexts/ai-chat-context";
 import { ImportStatementProvider } from "@/contexts/import-statement-context";
@@ -36,15 +37,16 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <AIChatProvider>
       <ImportStatementProvider>
-        <SidebarProvider className="dark bg-zinc-950 text-zinc-50 overflow-hidden min-h-svh flex w-full">
+        <SidebarProvider className="dark bg-background text-foreground overflow-hidden min-h-svh flex w-full">
           <AppSidebar user={user} />
           <SidebarInset>
             <DashboardHeader />
-            <div className="flex-1 min-h-0 overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-zinc-800">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-zinc-800">
               {children}
             </div>
           </SidebarInset>
           <AIChatPanel />
+          <FloatingAIOrb />
           <ImportStatementModal accounts={accounts} />
         </SidebarProvider>
       </ImportStatementProvider>

@@ -67,7 +67,52 @@ export const categories = pgTable("categories", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-// ─── 5. TRANSACTIONS (transações; a IA pode popular com ai_generated = true) ─
+// ─── 5. CREDIT CARDS (cartões de crédito; só últimos 4 dígitos armazenados) ───
+export const creditCards = pgTable("credit_cards", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  last4: text("last4").notNull(),
+  holderName: text("holder_name").notNull(),
+  expiryMonth: text("expiry_month").notNull(),
+  expiryYear: text("expiry_year").notNull(),
+  gradientKey: text("gradient_key").notNull().default("orange_red"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ─── 6. CREDIT CARD INVOICES (faturas de cartão; extraídas pela IA) ──────────
+export const creditCardInvoices = pgTable("credit_card_invoices", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  creditCardId: uuid("credit_card_id")
+    .notNull()
+    .references(() => creditCards.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  dueDate: date("due_date"),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  aiSummary: text("ai_summary"),
+  aiSuggestions: text("ai_suggestions"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const creditCardInvoiceItems = pgTable("credit_card_invoice_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  invoiceId: uuid("invoice_id")
+    .notNull()
+    .references(() => creditCardInvoices.id, { onDelete: "cascade" }),
+  description: text("description"),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  date: date("date"),
+  installmentsCurrent: text("installments_current"),
+  installmentsTotal: text("installments_total"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ─── 7. TRANSACTIONS (transações; a IA pode popular com ai_generated = true) ─
 export const transactions = pgTable("transactions", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
@@ -98,6 +143,12 @@ export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
+export type CreditCard = typeof creditCards.$inferSelect;
+export type NewCreditCard = typeof creditCards.$inferInsert;
+export type CreditCardInvoice = typeof creditCardInvoices.$inferSelect;
+export type NewCreditCardInvoice = typeof creditCardInvoices.$inferInsert;
+export type CreditCardInvoiceItem = typeof creditCardInvoiceItems.$inferSelect;
+export type NewCreditCardInvoiceItem = typeof creditCardInvoiceItems.$inferInsert;
 
 export type TransactionType = (typeof transactionTypeEnum.enumValues)[number];
 export type AccountType = (typeof accountTypeEnum.enumValues)[number];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -26,9 +26,21 @@ function getDateString() {
 }
 
 export function GreetingCard({ userName = "Demo" }: { userName?: string }) {
-  const greeting = useMemo(() => getGreeting(), []);
-  const time = useMemo(() => getTimeString(), []);
-  const date = useMemo(() => getDateString(), []);
+  const [time, setTime] = useState(() => getTimeString());
+  const [date, setDate] = useState(() => getDateString());
+  const [greeting, setGreeting] = useState(() => getGreeting());
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setTime(now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+      setDate(now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+      setGreeting(getGreeting());
+    };
+    update();
+    const interval = setInterval(update, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const displayName = userName?.split(" ")[0] || "Demo";
 

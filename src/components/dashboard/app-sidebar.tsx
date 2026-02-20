@@ -4,11 +4,11 @@ import * as React from "react";
 import {
   LayoutDashboard,
   Wallet,
+  CreditCard,
   PieChart,
   ArrowRightLeft,
   Settings,
   LifeBuoy,
-  Bot,
 } from "lucide-react";
 
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -20,30 +20,23 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
   SidebarGroup,
   SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAIChat } from "@/contexts/ai-chat-context";
 
 const navMain = [
-    { title: "Visão Geral", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Contas", url: "/dashboard/accounts", icon: Wallet },
-    {
-      title: "Assistente IA",
-      url: "#",
-      icon: Bot,
-      isChat: true,
-    },
-    {
-      title: "Transações",
-      url: "/dashboard/transactions",
-      icon: ArrowRightLeft,
-    },
-    { title: "Relatórios", url: "/dashboard/reports", icon: PieChart },
-  ];
+  { title: "Visão Geral", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Contas", url: "/dashboard/accounts", icon: Wallet },
+  { title: "Cartão de crédito", url: "/dashboard/cards", icon: CreditCard },
+  {
+    title: "Transações",
+    url: "/dashboard/transactions",
+    icon: ArrowRightLeft,
+  },
+  { title: "Relatórios", url: "/dashboard/reports", icon: PieChart },
+];
 const navSecondary = [
   { title: "Configurações", url: "/dashboard/settings", icon: Settings },
   { title: "Ajuda", url: "/help", icon: LifeBuoy },
@@ -56,36 +49,28 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user: SidebarUser }) {
   const pathname = usePathname();
-  const { setOpen: setChatOpen } = useAIChat();
 
   return (
-    <Sidebar collapsible="icon" {...props} className="border-r-zinc-800">
-      <SidebarHeader>
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader className="w-full pl-5 pr-5 pt-3 pb-2 group-data-[collapsible=icon]:p-2">
+        <div className="flex items-center gap-2 mb-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:mb-2">
+          <span className="font-semibold text-zinc-100 text-sm group-data-[collapsible=icon]:hidden">
+            Omni
+          </span>
+          <span className="inline-flex items-center rounded-md bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400 ring-1 ring-emerald-500/30">
+            beta
+          </span>
+        </div>
         <NavUser user={user} />
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-3 group-data-[collapsible=icon]:px-2">
         {/* 2. NAVEGAÇÃO PRINCIPAL */}
-        <SidebarGroup>
+        <SidebarGroup className="group-data-[collapsible=icon]:px-0">
           <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
           <SidebarMenu>
             {navMain.map((item) => {
-              const isChat = "isChat" in item && item.isChat;
-              const isActive = !isChat && pathname === item.url;
-              if (isChat) {
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      tooltip={item.title}
-                      className="hover:bg-zinc-800 text-zinc-400 hover:text-emerald-500"
-                      onClick={() => setChatOpen(true)}
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              }
+              const isActive = pathname === item.url;
               return (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
@@ -106,7 +91,7 @@ export function AppSidebar({
         </SidebarGroup>
 
         {/* 3. NAVEGAÇÃO SECUNDÁRIA */}
-        <SidebarGroup className="mt-auto">
+        <SidebarGroup className="mt-auto group-data-[collapsible=icon]:px-0">
           <SidebarGroupLabel>Suporte</SidebarGroupLabel>
           <SidebarMenu>
             {navSecondary.map((item) => (
@@ -128,13 +113,12 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      {/* 4. RODAPÉ (PODE TER LOGO OU VERSÃO) */}
-      <SidebarFooter>
-        <div className="p-2 text-xs text-zinc-600 group-data-[collapsible=icon]:hidden text-center">
-          v1.0.0 Alpha
+      {/* 4. RODAPÉ */}
+      <SidebarFooter className="px-3">
+        <div className="py-2 text-xs text-zinc-600 group-data-[collapsible=icon]:hidden text-center">
+          Omni · beta
         </div>
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   );
 }

@@ -102,7 +102,7 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
             >
               <div
                 role="button"
@@ -138,10 +138,10 @@ export function NavUser({
                   </div>
                 )}
               </div>
-              <span className="flex-1 truncate text-left text-sm font-semibold">
+              <span className="flex-1 truncate text-left text-sm font-semibold group-data-[collapsible=icon]:hidden">
                 {formatFirstNameLastName(user.name)}
               </span>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
