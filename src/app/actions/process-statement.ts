@@ -161,6 +161,7 @@ async function extractTransactionsWithAI(
 export async function uploadAndProcessStatement(
   formData: FormData,
 ): Promise<UploadAndProcessResult> {
+  let pdfPassword: string | null = null;
   try {
     const supabase = await createClient();
     const {
@@ -169,7 +170,7 @@ export async function uploadAndProcessStatement(
     if (!user) return { ok: false, error: "Não autenticado" };
 
     const file = formData.get("file") as File | null;
-    const pdfPassword = (formData.get("pdfPassword") as string) || null;
+    pdfPassword = (formData.get("pdfPassword") as string) || null;
     if (!file?.size) return { ok: false, error: "Nenhum arquivo enviado" };
     if (file.size > DOCUMENTS_MAX_BYTES) {
       return { ok: false, error: "Arquivo maior que 10 MB" };

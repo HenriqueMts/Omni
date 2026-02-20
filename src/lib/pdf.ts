@@ -30,7 +30,9 @@ export async function extractTextFromPdf(
   // Se há senha informada, tenta primeiro com pdf-parse
   const trimmedPassword = password.trim();
   try {
-    const pdfData = await pdfParse.default(buffer, { password: trimmedPassword });
+    // pdf-parse aceita password em runtime; @types/pdf-parse não declara a propriedade
+    const opts = { password: trimmedPassword };
+    const pdfData = await pdfParse.default(buffer, opts as Parameters<typeof pdfParse.default>[1]);
     return pdfData.text || "";
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
