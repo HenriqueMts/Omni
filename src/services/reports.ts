@@ -77,6 +77,7 @@ export async function getReportsData(userId: string): Promise<ReportsData> {
   const list = await db
     .select({
       id: transactions.id,
+      accountId: transactions.accountId,
       amount: transactions.amount,
       type: transactions.type,
       description: transactions.description,
@@ -95,10 +96,58 @@ export async function getReportsData(userId: string): Promise<ReportsData> {
     )
     .orderBy(desc(transactions.date));
 
-  const revenue = list
+  // Identificar transferências entre contas do mesmo usuário para excluir dos cálculos
+  const transferCategoryNames = new Set(["transferencia", "transferência", "transfer"]);
+  const normalizeCat = (s: string | null) => s?.trim().toLowerCase().normalize("NFD").replaceAll(/\p{Diacritic}/gu, "") ?? "";
+  
+  const transferTransactions = list.filter((t) => {
+    const catNorm = normalizeCat(t.categoryName);
+    const descLower = (t.description ?? "").toLowerCase();
+    const isTransferDesc = descLower.includes("pix") || descLower.includes("ted") || descLower.includes("doc") || descLower.includes("transferência") || descLower.includes("transferencia");
+    return transferCategoryNames.has(catNorm) || t.type === "transfer" || isTransferDesc;
+  });
+
+  // Agrupar por valor absoluto e data (mesmo dia ou próximo)
+  const transferMap = new Map<string, typeof list>();
+  for (const t of transferTransactions) {
+    const amount = Math.abs(Number(t.amount));
+    const dateKey = t.date;
+    // Agrupar por valor e data (tolerância de ±1 dia para transferências)
+    const key = `${amount.toFixed(2)}|${dateKey}`;
+    if (!transferMap.has(key)) transferMap.set(key, []);
+    transferMap.get(key)!.push(t);
+  }
+
+  // Identificar pares: saída e entrada de mesmo valor no mesmo dia ou próximo
+  const transferIdsToExclude = new Set<string>();
+  for (const [, trans] of transferMap.entries()) {
+    if (trans.length < 2) continue;
+    const expenses = trans.filter((t) => t.type === "expense");
+    const incomes = trans.filter((t) => t.type === "income");
+    
+    // Se há saída e entrada de mesmo valor absoluto, são transferências entre contas
+    if (expenses.length > 0 && incomes.length > 0) {
+      // Verificar se os valores são iguais (tolerância de 0.01)
+      for (const exp of expenses) {
+        const expAmount = Math.abs(Number(exp.amount));
+        for (const inc of incomes) {
+          const incAmount = Math.abs(Number(inc.amount));
+          if (Math.abs(expAmount - incAmount) < 0.01) {
+            transferIdsToExclude.add(exp.id);
+            transferIdsToExclude.add(inc.id);
+          }
+        }
+      }
+    }
+  }
+
+  // Filtrar transferências dos cálculos
+  const filteredList = list.filter((t) => !transferIdsToExclude.has(t.id));
+
+  const revenue = filteredList
     .filter((t) => t.type === "income")
     .reduce((acc, t) => acc + Number(t.amount), 0);
-  const expense = list
+  const expense = filteredList
     .filter((t) => t.type === "expense")
     .reduce((acc, t) => acc + Number(t.amount), 0);
   const balance = revenue - expense;
@@ -111,7 +160,7 @@ export async function getReportsData(userId: string): Promise<ReportsData> {
     const key = `${new Date().getFullYear()}-${String(m).padStart(2, "0")}`;
     byMonth.set(key, { revenue: 0, expense: 0 });
   }
-  for (const t of list) {
+  for (const t of filteredList) {
     const monthKey = t.date.slice(0, 7);
     const curr = byMonth.get(monthKey) ?? { revenue: 0, expense: 0 };
     if (t.type === "income") curr.revenue += Number(t.amount);
@@ -131,7 +180,7 @@ export async function getReportsData(userId: string): Promise<ReportsData> {
       expense: v.expense,
     }));
 
-  const expenseList = list.filter((t) => t.type === "expense");
+  const expenseList = filteredList.filter((t) => t.type === "expense");
   const totalExpense = expenseList.reduce(
     (acc, t) => acc + Number(t.amount),
     0
@@ -165,7 +214,7 @@ export async function getReportsData(userId: string): Promise<ReportsData> {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    const dayTransactions = list.filter((x) => x.date === dateStr);
+    const dayTransactions = filteredList.filter((x) => x.date === dateStr);
     const amount = dayTransactions
       .filter((x) => x.type === "expense")
       .reduce((a, x) => a + Number(x.amount), 0);
@@ -185,7 +234,7 @@ export async function getReportsData(userId: string): Promise<ReportsData> {
     days,
   };
 
-  const recentTransactions = list.slice(0, 5).map((t) => ({
+  const recentTransactions = filteredList.slice(0, 5).map((t) => ({
     id: t.id,
     description: t.description,
     categoryName: t.categoryName,

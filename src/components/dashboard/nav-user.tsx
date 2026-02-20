@@ -86,7 +86,7 @@ export function NavUser({
 
   return (
     <SidebarMenu>
-      <SidebarMenuItem>
+      <SidebarMenuItem suppressHydrationWarning>
         <AvatarImportModal
           open={importModalOpen}
           onOpenChange={setImportModalOpen}
@@ -103,6 +103,7 @@ export function NavUser({
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+              suppressHydrationWarning
             >
               <div
                 role="button"

@@ -69,11 +69,12 @@ export default async function DashboardPage() {
             <ArrowUpCircle className="h-4 w-4 shrink-0 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold text-emerald-500 break-words sm:text-2xl">
-              + {new Intl.NumberFormat("pt-BR", {
+            <div className="text-lg font-bold text-emerald-500 break-words sm:text-2xl flex items-baseline gap-1">
+              <span className="shrink-0">+</span>
+              <span>{new Intl.NumberFormat("pt-BR", {
                 style: "currency",
                 currency: "BRL",
-              }).format(income)}
+              }).format(income)}</span>
             </div>
           </CardContent>
         </Card>
@@ -86,11 +87,12 @@ export default async function DashboardPage() {
             <ArrowDownCircle className="h-4 w-4 shrink-0 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold text-red-500 break-words sm:text-2xl">
-              - {new Intl.NumberFormat("pt-BR", {
+            <div className="text-lg font-bold text-red-500 break-words sm:text-2xl flex items-baseline gap-1">
+              <span className="shrink-0">−</span>
+              <span>{new Intl.NumberFormat("pt-BR", {
                 style: "currency",
                 currency: "BRL",
-              }).format(expense)}
+              }).format(expense)}</span>
             </div>
           </CardContent>
         </Card>
@@ -143,12 +145,13 @@ export default async function DashboardPage() {
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className={`text-lg font-bold sm:text-2xl ${savings >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-              {savings >= 0 ? "+" : ""}
-              {new Intl.NumberFormat("pt-BR", {
+            <div className={`text-lg font-bold sm:text-2xl flex items-baseline gap-1 ${savings >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {savings >= 0 && <span className="shrink-0">+</span>}
+              {savings < 0 && <span className="shrink-0">−</span>}
+              <span>{new Intl.NumberFormat("pt-BR", {
                 style: "currency",
                 currency: "BRL",
-              }).format(savings)}
+              }).format(Math.abs(savings))}</span>
             </div>
             <div className="space-y-2">
               <div className="flex h-8 w-full overflow-hidden rounded-lg bg-zinc-800">

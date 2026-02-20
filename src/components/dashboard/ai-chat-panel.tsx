@@ -41,7 +41,11 @@ export function AIChatPanel({ userName }: Props) {
   }, [open, suggestions.length]);
 
   React.useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    if (messages.length > 0) {
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+      }, 100);
+    }
   }, [messages]);
 
   async function handleSend(text?: string) {
@@ -68,14 +72,44 @@ export function AIChatPanel({ userName }: Props) {
 
   const hasMessages = messages.length > 0;
 
+  React.useEffect(() => {
+    if (!open) return;
+    
+    const input = inputRef.current;
+    if (!input) return;
+
+    const handleFocus = () => {
+      // Quando o input recebe foco, scrolla para o final após o teclado aparecer
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+      }, 400);
+    };
+
+    const handleInput = () => {
+      // Mantém scroll no final enquanto digita
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "auto" });
+      }, 50);
+    };
+
+    input.addEventListener("focus", handleFocus);
+    input.addEventListener("input", handleInput);
+    
+    return () => {
+      input.removeEventListener("focus", handleFocus);
+      input.removeEventListener("input", handleInput);
+    };
+  }, [open]);
+
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col border-zinc-800 bg-zinc-950 p-0 sm:max-w-md"
+        className="flex w-full flex-col border-zinc-800 bg-zinc-950 p-0 h-dvh max-h-dvh sm:h-auto sm:max-h-[90vh] sm:max-w-md"
         showCloseButton={true}
       >
-        <SheetHeader className="border-b border-zinc-800 px-4 py-4">
+        <SheetHeader className="shrink-0 border-b border-zinc-800 px-4 py-4">
           <SheetTitle className="text-left text-zinc-100 flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
               <Sparkles className="h-4 w-4" />
@@ -89,7 +123,7 @@ export function AIChatPanel({ userName }: Props) {
         </SheetHeader>
 
         <div className="flex flex-1 flex-col overflow-hidden min-h-0">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 pb-20">
             {!hasMessages && (
               <div className="space-y-2">
                 <p className="text-sm text-zinc-400">Olá, {displayName}</p>
@@ -178,7 +212,7 @@ export function AIChatPanel({ userName }: Props) {
             </div>
           </div>
 
-          <div className="border-t border-zinc-800 p-4 shrink-0">
+          <div className="border-t border-zinc-800 p-4 shrink-0 bg-zinc-950">
             <form
               onSubmit={(e) => {
                 e.preventDefault();

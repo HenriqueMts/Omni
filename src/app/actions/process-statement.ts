@@ -40,6 +40,7 @@ Regras para transações:
 4. Valores em número (ex: 1250.00). Se for negativo no extrato, use valor positivo e type 'expense'.
 5. Data no formato ISO YYYY-MM-DD. Use o ano atual se não estiver explícito.
 6. INVESTIMENTOS: Não considere investimentos como saídas comuns. Transações de aplicação financeira, CDB, Tesouro Direto, fundos, previdência, compra de ações/ativos ou qualquer movimento para investimento devem ter categoria exatamente "Investimento" (e type 'expense'). Ex.: "Aplicação CDB", "Resgate fundo", "Tesouro Selic" -> category "Investimento".
+7. TRANSFERÊNCIAS: Se identificar transferências (PIX, TED, DOC, transferência entre contas), use categoria "Transferencia" ou "Transferência". Marque como 'expense' para saídas (ex: "Pix enviado", "TED enviado") e 'income' para entradas (ex: "Pix recebido", "TED recebido"). Essas transferências serão analisadas depois para identificar se são entre contas do mesmo titular e não entrarão no somatório de receitas/despesas dos relatórios.
 
 Regras para saldo final:
 - Procure por "Saldo final", "Saldo em conta", "Saldo disponível", "Saldo" no fim do extrato.
@@ -184,9 +185,35 @@ export async function uploadAndProcessStatement(
     }
 
     // 1. Extrair texto (com senha se PDF protegido)
-    const textContent = await extractTextFromFile(file, pdfPassword);
+    let textContent: string;
+    try {
+      textContent = await extractTextFromFile(file, pdfPassword);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      const isPasswordError = (err as any)?.isPasswordError || errorMsg === "PDF_PASSWORD_REQUIRED";
+      const needsPassword = (err as any)?.needsPassword;
+      
+      if (isPasswordError) {
+        if (needsPassword || !pdfPassword) {
+          return {
+            ok: false,
+            error: "PDF protegido por senha. Ative a opção e informe a senha.",
+          };
+        }
+        // Se chegou aqui, tentou com senha mas falhou
+        // Pode ser senha incorreta ou PDF com criptografia não suportada
+        const originalMsg = (err as any)?.originalMessage || errorMsg;
+        console.error("Erro ao descriptografar PDF:", originalMsg);
+        return {
+          ok: false,
+          error: "Não foi possível abrir o PDF com a senha fornecida. Verifique se a senha está correta. Alguns tipos de criptografia PDF podem não ser suportados.",
+        };
+      }
+      throw err; // Relança outros erros para o catch externo
+    }
+    
     if (!textContent.trim()) {
-      return { ok: false, error: "Não foi possível extrair texto do arquivo." };
+      return { ok: false, error: "Não foi possível extrair texto do arquivo. O PDF pode estar vazio ou corrompido." };
     }
 
     // 2. IA (Groq) — extração do texto; arquivo não é salvo no storage
@@ -200,18 +227,27 @@ export async function uploadAndProcessStatement(
   } catch (err) {
     console.error("Erro ao processar extrato:", err);
     const msg = err instanceof Error ? err.message : String(err);
+    
+    // Erros de senha já foram tratados acima, mas se chegou aqui pode ser outro tipo
     if (
       msg.includes("password") ||
       msg.includes("senha") ||
       msg.includes("Password") ||
-      msg.includes("NEED_PASSWORD")
+      msg.includes("NEED_PASSWORD") ||
+      msg === "PDF_PASSWORD_REQUIRED"
     ) {
+      if (!pdfPassword) {
+        return {
+          ok: false,
+          error: "PDF protegido por senha. Ative a opção e informe a senha.",
+        };
+      }
       return {
         ok: false,
-        error:
-          "PDF protegido por senha. Ative a opção e informe a senha correta.",
+        error: "Senha incorreta. Verifique a senha e tente novamente.",
       };
     }
+    
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Falha ao processar o arquivo com IA.",

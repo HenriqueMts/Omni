@@ -71,6 +71,7 @@ export async function getDashboardStats() {
   const rows = await db
     .select({
       id: transactions.id,
+      accountId: transactions.accountId,
       amount: transactions.amount,
       type: transactions.type,
       description: transactions.description,
@@ -84,9 +85,51 @@ export async function getDashboardStats() {
     )
     .orderBy(desc(transactions.date));
 
-  const { income, expense, investment, total } = aggregateTotals(rows);
+  // Identificar e excluir transferências entre contas do mesmo usuário
+  const transferCategoryNames = new Set(["transferencia", "transferência", "transfer"]);
+  const normalizeCat = (s: string | null) => s?.trim().toLowerCase().normalize("NFD").replaceAll(/\p{Diacritic}/gu, "") ?? "";
+  
+  const transferTransactions = rows.filter((t) => {
+    const catNorm = normalizeCat(t.categoryName);
+    const descLower = (t.description ?? "").toLowerCase();
+    const isTransferDesc = descLower.includes("pix") || descLower.includes("ted") || descLower.includes("doc") || descLower.includes("transferência") || descLower.includes("transferencia");
+    return transferCategoryNames.has(catNorm) || t.type === "transfer" || isTransferDesc;
+  });
 
-  const list = rows.map((t) => ({
+  const transferMap = new Map<string, typeof rows>();
+  for (const t of transferTransactions) {
+    const amount = Math.abs(Number(t.amount));
+    const dateKey = t.date;
+    const key = `${amount.toFixed(2)}|${dateKey}`;
+    if (!transferMap.has(key)) transferMap.set(key, []);
+    transferMap.get(key)!.push(t);
+  }
+
+  const transferIdsToExclude = new Set<string>();
+  for (const [, trans] of transferMap.entries()) {
+    if (trans.length < 2) continue;
+    const expenses = trans.filter((t) => t.type === "expense");
+    const incomes = trans.filter((t) => t.type === "income");
+    
+    if (expenses.length > 0 && incomes.length > 0) {
+      for (const exp of expenses) {
+        const expAmount = Math.abs(Number(exp.amount));
+        for (const inc of incomes) {
+          const incAmount = Math.abs(Number(inc.amount));
+          if (Math.abs(expAmount - incAmount) < 0.01) {
+            transferIdsToExclude.add(exp.id);
+            transferIdsToExclude.add(inc.id);
+          }
+        }
+      }
+    }
+  }
+
+  const filteredRows = rows.filter((t) => !transferIdsToExclude.has(t.id));
+
+  const { income, expense, investment, total } = aggregateTotals(filteredRows);
+
+  const list = filteredRows.map((t) => ({
     id: t.id,
     amount: t.amount,
     type: t.type,
@@ -94,7 +137,7 @@ export async function getDashboardStats() {
     date: t.date,
   }));
 
-  const chartData = buildChartData(rows);
+  const chartData = buildChartData(filteredRows);
 
   return {
     income,
