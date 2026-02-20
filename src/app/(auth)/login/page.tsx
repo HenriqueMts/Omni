@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useActionState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
+import { LayoutDashboard, MailCheck } from "lucide-react";
 import { login, signup } from "./actions";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -11,52 +13,48 @@ import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [loginState, loginAction] = useActionState(login, null);
+  const [signupState, signupAction] = useActionState(signup, null);
+
+  useEffect(() => {
+    if (loginState?.error) toast.error(loginState.error);
+  }, [loginState?.error]);
+
+  useEffect(() => {
+    if (signupState?.error) toast.error(signupState.error);
+  }, [signupState?.error]);
+
+  useEffect(() => {
+    if (signupState?.success === "confirm_email") {
+      toast.success("Conta criada!", {
+        description: "Verifique seu email para confirmar o cadastro e poder entrar.",
+      });
+    }
+  }, [signupState?.success]);
 
   return (
     <div className="grid min-h-svh w-full grid-cols-1 lg:grid-cols-[1fr_1.1fr] bg-zinc-950">
-      {/* Header: logo + link */}
-      <header className="fixed top-0 left-0 right-0 z-10 flex items-center justify-between px-6 py-4 lg:px-8">
-        <Link href="/login" className="flex items-center gap-2 text-zinc-100 font-semibold">
-          <span className="text-lg">Omni</span>
-        </Link>
-        {activeTab === "login" ? (
+      {/* Coluna esquerda: logo + textos centralizados */}
+      <div className="relative flex min-h-svh flex-col items-center justify-center px-8 py-16 lg:px-12">
+        <div className="max-w-md space-y-8 text-center">
           <Link
             href="/login"
-            onClick={(e) => {
-              e.preventDefault();
-              setActiveTab("register");
-            }}
-            className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+            className="inline-flex flex-col items-center gap-3 text-zinc-100"
           >
-            Criar conta
+            <span className="flex size-12 items-center justify-center rounded-xl bg-zinc-800 text-emerald-400 ring-1 ring-zinc-700">
+              <LayoutDashboard className="size-6" aria-hidden />
+            </span>
+            <span className="text-xl font-semibold tracking-tight">Omni</span>
           </Link>
-        ) : (
-          <Link
-            href="/login"
-            onClick={(e) => {
-              e.preventDefault();
-              setActiveTab("login");
-            }}
-            className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
-          >
-            Login
-          </Link>
-        )}
-      </header>
-
-      {/* Coluna esquerda: textos */}
-      <div className="relative flex min-h-svh flex-col justify-end px-8 pb-16 pt-24 lg:px-12 lg:pb-20 lg:pt-28">
-        <div className="max-w-md space-y-6">
-          <h2 className="text-2xl font-semibold leading-tight text-zinc-100 lg:text-3xl">
-            Controle sua vida financeira
-          </h2>
-          <p className="text-base leading-relaxed text-zinc-400 lg:text-lg">
-            Uma visão clara das suas contas, transações, cartão de crédito e relatórios em um só lugar.
-            Importe extratos, analise gastos e tome decisões com mais segurança.
-          </p>
-          <blockquote className="border-l-2 border-emerald-500/50 pl-4 text-sm text-zinc-500 italic lg:text-base">
-            &ldquo;O Omni me ajudou a organizar minhas finanças e enxergar para onde vai cada real.&rdquo;
-          </blockquote>
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold leading-tight text-zinc-100 lg:text-3xl">
+              Controle sua vida financeira
+            </h2>
+            <p className="text-base leading-relaxed text-zinc-400 lg:text-lg">
+              Uma visão clara das suas contas, transações, cartão de crédito e relatórios em um só lugar.
+              Importe extratos, analise gastos e tome decisões com mais segurança.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -94,7 +92,7 @@ export default function LoginPage() {
               </TabsTrigger>
             </TabsList>
 
-            <div className="relative min-h-[260px] w-full overflow-hidden pt-6">
+            <div className="relative min-h-[380px] w-full overflow-visible pt-6 pb-2">
               <TabsContent
                 value="login"
                 forceMount
@@ -104,7 +102,7 @@ export default function LoginPage() {
                   "data-[state=inactive]:pointer-events-none data-[state=inactive]:-translate-y-2 data-[state=inactive]:opacity-0"
                 )}
               >
-                <form action={login} className="space-y-4">
+                <form action={loginAction} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-zinc-300">Email</Label>
                     <Input
@@ -144,7 +142,21 @@ export default function LoginPage() {
                   "data-[state=inactive]:pointer-events-none data-[state=inactive]:translate-y-2 data-[state=inactive]:opacity-0"
                 )}
               >
-                <form action={signup} className="space-y-4">
+                {signupState?.success === "confirm_email" && (
+                <div
+                  className="mb-4 flex gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200"
+                  role="alert"
+                >
+                  <MailCheck className="size-5 shrink-0 text-emerald-400" aria-hidden />
+                  <div>
+                    <p className="font-medium">Conta criada!</p>
+                    <p className="mt-0.5 text-emerald-200/90">
+                      Verifique seu email e clique no link para confirmar o cadastro. Depois você pode entrar normalmente.
+                    </p>
+                  </div>
+                </div>
+              )}
+                <form action={signupAction} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="fullName" className="text-zinc-300">Nome completo</Label>
                     <Input
