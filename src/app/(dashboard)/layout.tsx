@@ -45,7 +45,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
               {children}
             </div>
           </SidebarInset>
-          <AIChatPanel />
+          <AIChatPanel userName={user.name} />
           <FloatingAIOrb />
           <ImportStatementModal accounts={accounts} />
         </SidebarProvider>
