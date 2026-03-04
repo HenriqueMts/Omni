@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getAIGreeting } from "@/app/actions/greeting";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -29,8 +31,10 @@ export function GreetingCard({ userName = "Demo" }: { userName?: string }) {
   const [time, setTime] = useState(() => getTimeString());
   const [date, setDate] = useState(() => getDateString());
   const [greeting, setGreeting] = useState(() => getGreeting());
+  const [aiMessage, setAiMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // Atualiza relógio
     const update = () => {
       const now = new Date();
       setTime(now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
@@ -39,8 +43,12 @@ export function GreetingCard({ userName = "Demo" }: { userName?: string }) {
     };
     update();
     const interval = setInterval(update, 60_000);
+
+    // Busca mensagem da IA
+    getAIGreeting(userName).then(setAiMessage);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [userName]);
 
   const displayName = userName?.split(" ")[0] || "Demo";
 
@@ -51,9 +59,13 @@ export function GreetingCard({ userName = "Demo" }: { userName?: string }) {
           <h2 className="text-2xl font-bold text-zinc-100">
             {greeting}, {displayName}
           </h2>
-          <p className="text-zinc-500 mt-0.5">
-            Pronto para manter suas finanças em dia? 🚀
-          </p>
+          {aiMessage ? (
+            <p className="text-zinc-500 mt-0.5 animate-fade-in-up">
+              {aiMessage}
+            </p>
+          ) : (
+            <Skeleton className="h-5 w-64 mt-1 bg-zinc-800/50" />
+          )}
         </div>
         <div className="flex flex-col items-start md:items-end mt-2 md:mt-0">
           <span className="text-3xl font-semibold tabular-nums text-zinc-100">

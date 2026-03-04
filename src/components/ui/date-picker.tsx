@@ -15,6 +15,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+/** Date (single) e Date Range usam o padrão shadcn: Popover + Calendar (react-day-picker). */
+
 type DatePickerProps = Readonly<{
   value?: Date;
   onChange?: (date: Date | undefined) => void;
@@ -132,6 +134,7 @@ export function DateRangePicker({
         <PopoverContent className="w-auto p-0 border-zinc-800 bg-zinc-900" align="start">
           <Calendar
             mode="range"
+            defaultMonth={range?.from}
             selected={range}
             onSelect={onChange}
             locale={ptBR}

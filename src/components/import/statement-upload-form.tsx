@@ -30,6 +30,7 @@ type Props = Readonly<{
     transactions: ExtractedTransaction[];
     closingBalance: number | null;
     selectedAccountId: string;
+    message?: string;
   }) => void;
 }>;
 
@@ -93,6 +94,7 @@ export function StatementUploadForm({ accounts, comboboxContainerRef, onEnviarSu
         transactions: result.transactions,
         closingBalance: result.closingBalance ?? null,
         selectedAccountId,
+        message: result.message,
       });
     } else {
       setError(result.error);

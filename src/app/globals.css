@@ -101,11 +101,11 @@
 
 /* Animações suaves para carga incremental */
 @keyframes fade-in-up {
-  from {
+  0% {
     opacity: 0;
     transform: translateY(8px);
   }
-  to {
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
@@ -145,6 +145,36 @@
 
 .animate-opacity-0 {
   opacity: 0;
+}
+
+/* Date range: marcação do período (react-day-picker + tema shadcn) */
+.rdp-range_start {
+  background-color: hsl(var(--accent));
+}
+.rdp-range_start .rdp-day_button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: 0.375rem 0 0 0.375rem;
+}
+.rdp-range_middle {
+  background-color: hsl(var(--accent));
+}
+.rdp-range_middle .rdp-day_button {
+  background-color: transparent;
+  color: hsl(var(--foreground));
+  border-radius: 0;
+  border: none;
+}
+.rdp-range_end {
+  background-color: hsl(var(--accent));
+}
+.rdp-range_end .rdp-day_button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+.rdp-range_start.rdp-range_end .rdp-day_button {
+  border-radius: 0.375rem;
 }
 
 /* Barra de rolagem para modais/áreas escuras */

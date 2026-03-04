@@ -15,20 +15,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxCollection,
-  ComboboxEmpty,
-} from "@/components/ui/combobox";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { createTransaction } from "@/app/actions/transactions";
 import { createCategoryIfNotExists } from "@/app/actions/categories";
 import { uniqueCategoriesByName } from "@/lib/categories";
 import type { Account, Category } from "@/db/schema";
 import { Plus } from "lucide-react";
+
+const NONE_VALUE = "__none__"; // Radix Select não permite value=""
 
 const TYPE_ITEMS: { value: string; label: string }[] = [
   { value: "expense", label: "Saída (gasto)" },
@@ -84,7 +86,7 @@ export function TransactionCreateModal({
 
   const allCategories = [...categories, ...localCategories];
   const categoryItems: { value: string; label: string }[] = [
-    { value: "", label: "Selecione (opcional)" },
+    { value: NONE_VALUE, label: "Selecione (opcional)" },
     ...uniqueCategoriesByName(allCategories).map((c) => ({ value: c.id, label: c.name })),
   ];
 
@@ -109,7 +111,7 @@ export function TransactionCreateModal({
     }
   }
   const accountItems: { value: string; label: string }[] = [
-    { value: "", label: "Selecione a conta" },
+    { value: NONE_VALUE, label: "Selecione a conta" },
     ...accounts.map((a) => ({ value: a.id, label: a.name })),
   ];
 
@@ -185,35 +187,26 @@ export function TransactionCreateModal({
           </div>
           <div className="grid gap-2">
             <Label className="text-zinc-400">Tipo</Label>
-            <Combobox
-              items={TYPE_ITEMS}
-              value={TYPE_ITEMS.find((t) => t.value === type) ?? TYPE_ITEMS[0]}
-              onValueChange={(v) => v && setType(v.value)}
-              itemToStringValue={(item) => item.label}
+            <Select
+              value={type}
+              onValueChange={(value) =>
+                setType(value as "income" | "expense" | "transfer")
+              }
             >
-              <ComboboxInput
-                showTrigger
-                showClear={false}
-                placeholder="Selecione o tipo"
-                className="h-10 w-full border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500"
-              />
-              <ComboboxContent container={formRef} className="border-zinc-800 bg-zinc-900">
-                <ComboboxList className="scrollbar-dark-translucent">
-                  <ComboboxEmpty>Nenhum tipo</ComboboxEmpty>
-                  <ComboboxCollection>
-                    {(item) => (
-                      <ComboboxItem
-                        key={item.value}
-                        value={item}
-                        className="text-zinc-200 data-highlighted:bg-zinc-800 data-highlighted:text-zinc-100"
-                      >
-                        {item.label}
-                      </ComboboxItem>
-                    )}
-                  </ComboboxCollection>
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+              <SelectTrigger className="h-10 w-full border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500">
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent className="border-zinc-800 bg-zinc-900">
+                <SelectGroup>
+                  <SelectLabel>Tipo</SelectLabel>
+                  {TYPE_ITEMS.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="amount" className="text-zinc-400">
@@ -303,68 +296,46 @@ export function TransactionCreateModal({
                 </div>
               </div>
             ) : (
-              <Combobox
-                items={categoryItems}
-                value={categoryItems.find((c) => c.value === categoryId) ?? categoryItems[0]}
-                onValueChange={(v) => v && setCategoryId(v.value)}
-                itemToStringValue={(item) => item.label}
+              <Select
+                value={categoryId || NONE_VALUE}
+                onValueChange={(value) => setCategoryId(value === NONE_VALUE ? "" : value)}
               >
-                <ComboboxInput
-                  showTrigger
-                  showClear={false}
-                  placeholder="Selecione (opcional)"
-                  className="h-10 w-full border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500"
-                />
-                <ComboboxContent container={formRef} className="border-zinc-800 bg-zinc-900">
-                  <ComboboxList className="scrollbar-dark-translucent">
-                    <ComboboxEmpty>Nenhuma categoria</ComboboxEmpty>
-                    <ComboboxCollection>
-                      {(item) => (
-                        <ComboboxItem
-                          key={item.value}
-                          value={item}
-                          className="text-zinc-200 data-highlighted:bg-zinc-800 data-highlighted:text-zinc-100"
-                        >
-                          {item.label}
-                        </ComboboxItem>
-                      )}
-                    </ComboboxCollection>
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
+                <SelectTrigger className="h-10 w-full border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500">
+                  <SelectValue placeholder="Selecione (opcional)" />
+                </SelectTrigger>
+                <SelectContent className="border-zinc-800 bg-zinc-900">
+                  <SelectGroup>
+                    <SelectLabel>Categorias</SelectLabel>
+                    {categoryItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             )}
           </div>
           <div className="grid gap-2">
             <Label className="text-zinc-400">Conta</Label>
-            <Combobox
-              items={accountItems}
-              value={accountItems.find((a) => a.value === accountId) ?? accountItems[0]}
-              onValueChange={(v) => v && setAccountId(v.value)}
-              itemToStringValue={(item) => item.label}
+            <Select
+              value={accountId || NONE_VALUE}
+              onValueChange={(value) => setAccountId(value === NONE_VALUE ? "" : value)}
             >
-              <ComboboxInput
-                showTrigger
-                showClear={false}
-                placeholder="Selecione a conta"
-                className="h-10 w-full border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500"
-              />
-              <ComboboxContent container={formRef} className="border-zinc-800 bg-zinc-900">
-                <ComboboxList className="scrollbar-dark-translucent">
-                  <ComboboxEmpty>Nenhuma conta</ComboboxEmpty>
-                  <ComboboxCollection>
-                    {(item) => (
-                      <ComboboxItem
-                        key={item.value}
-                        value={item}
-                        className="text-zinc-200 data-highlighted:bg-zinc-800 data-highlighted:text-zinc-100"
-                      >
-                        {item.label}
-                      </ComboboxItem>
-                    )}
-                  </ComboboxCollection>
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+              <SelectTrigger className="h-10 w-full border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500">
+                <SelectValue placeholder="Selecione a conta" />
+              </SelectTrigger>
+              <SelectContent className="border-zinc-800 bg-zinc-900">
+                <SelectGroup>
+                  <SelectLabel>Contas</SelectLabel>
+                  {accountItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center gap-2">
             <Checkbox id="isRecurring" name="isRecurring" className="border-zinc-600" />

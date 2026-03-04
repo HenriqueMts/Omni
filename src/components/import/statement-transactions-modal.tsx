@@ -19,6 +19,7 @@ type TransactionsData = {
   transactions: ExtractedTransaction[];
   closingBalance: number | null;
   selectedAccountId: string;
+  message?: string;
 };
 
 type Props = Readonly<{
@@ -94,32 +95,39 @@ export function StatementTransactionsModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.map((t, i) => (
-                      <tr
-                        key={`${t.date}-${t.description}-${t.amount}-${i}`}
-                        className="border-b border-zinc-800/80 hover:bg-zinc-800/30"
-                      >
-                        <td className="py-3 px-4 text-zinc-300 whitespace-nowrap">{t.date}</td>
-                        <td className="py-3 px-4 text-zinc-200 min-w-[200px] max-w-[400px] break-words">
-                          <span title={t.description}>{t.description}</span>
-                        </td>
-                        <td className="py-3 px-4 text-zinc-400 whitespace-nowrap">{t.category}</td>
-                        <td
-                          className={`py-3 px-4 text-right font-medium whitespace-nowrap ${
-                            t.type === "income" ? "text-emerald-500" : "text-red-500"
-                          }`}
+                    {transactions.map((t, i) => {
+                      const isInvestment = t.category === "Investimento";
+                      return (
+                        <tr
+                          key={`${t.date}-${t.description}-${t.amount}-${i}`}
+                          className="border-b border-zinc-800/80 hover:bg-zinc-800/30"
                         >
-                          {t.type === "income" ? "+" : "-"}{" "}
-                          {new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(t.amount)}
-                        </td>
-                        <td className="py-3 px-4 text-zinc-500 whitespace-nowrap">
-                          {getTransactionTypeLabel(t.type, locale)}
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="py-3 px-4 text-zinc-300 whitespace-nowrap">{t.date}</td>
+                          <td className="py-3 px-4 text-zinc-200 min-w-[200px] max-w-[400px] break-words">
+                            <span title={t.description}>{t.description}</span>
+                          </td>
+                          <td className="py-3 px-4 text-zinc-400 whitespace-nowrap">{t.category}</td>
+                          <td
+                            className={`py-3 px-4 text-right font-medium whitespace-nowrap ${
+                              t.type === "income" 
+                                ? "text-emerald-500" 
+                                : isInvestment 
+                                  ? "text-blue-400" 
+                                  : "text-red-500"
+                            }`}
+                          >
+                            {t.type === "income" ? "+" : "-"}{" "}
+                            {new Intl.NumberFormat("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            }).format(t.amount)}
+                          </td>
+                          <td className="py-3 px-4 text-zinc-500 whitespace-nowrap">
+                            {isInvestment ? "Investimento" : getTransactionTypeLabel(t.type, locale)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -146,7 +154,27 @@ export function StatementTransactionsModal({
                 </Button>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+              <div className="bg-zinc-800/50 p-4 rounded-full mb-4">
+                <Check className="h-8 w-8 text-zinc-500" />
+              </div>
+              <h3 className="text-lg font-medium text-zinc-200 mb-2">
+                Nenhuma transação encontrada
+              </h3>
+              <p className="text-zinc-400 max-w-md mx-auto mb-8 leading-relaxed">
+                {transactionsData?.message || "O arquivo foi processado mas não encontramos transações válidas para importar."}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleVoltar}
+                className="border-zinc-700 text-zinc-300"
+              >
+                Voltar e tentar outro arquivo
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

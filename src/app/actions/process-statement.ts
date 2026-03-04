@@ -24,7 +24,7 @@ export type ExtractedTransaction = {
 };
 
 export type UploadAndProcessResult =
-  | { ok: true; transactions: ExtractedTransaction[]; closingBalance: number | null }
+  | { ok: true; transactions: ExtractedTransaction[]; closingBalance: number | null; message?: string }
   | { ok: false; error: string };
 
 const EXTRACTION_PROMPT = `Você é um analista financeiro especialista em conversão de dados.
@@ -40,6 +40,11 @@ Regras para transações:
 4. Valores em número (ex: 1250.00). Se for negativo no extrato, use valor positivo e type 'expense'.
 5. Data no formato ISO YYYY-MM-DD. Use o ano atual se não estiver explícito.
 6. INVESTIMENTOS: Não considere investimentos como saídas comuns. Transações de aplicação financeira, CDB, Tesouro Direto, fundos, previdência, compra de ações/ativos ou qualquer movimento para investimento devem ter categoria exatamente "Investimento" (e type 'expense'). Ex.: "Aplicação CDB", "Resgate fundo", "Tesouro Selic" -> category "Investimento".
+   - Se o extrato for claramente de uma CONTA DE INVESTIMENTO (ex.: texto no cabeçalho ou nome da conta mencionando "investimento", "corretora", "CDB", "fundo", "XP", "NuInvest", etc.):
+     - Entradas como "Pix recebido", "TED recebido", "Depósito" representam dinheiro novo que entrou na conta de investimento.
+     - Lançamentos com descrições como "dinheiro guardado", "aplicação", "aplicação CDB", "compra de ativo", "compra de ações" ou similares são movimentos internos de investimento. Use categoria "Investimento" e NÃO trate isso como se a conta tivesse ficado zerada.
+     - Quando houver um par ENTRADA + SAÍDA de mesmo valor e mesma data representando "o dinheiro entrou e foi imediatamente investido", considere que o saldo final (closingBalance) dessa conta deve refletir o valor investido que permaneceu na carteira, e NÃO 0.
+   - Se a conta parecer de investimento e o saldo final encontrado no texto for 0, mas as transações mostrarem entradas e aplicações em "Investimento", compare o saldo calculado pelas transações com o valor 0. Se ficar claro que o dinheiro apenas foi investido (e não sacado da corretora), use como closingBalance o valor efetivamente investido, e NÃO 0.
 7. TRANSFERÊNCIAS: Se identificar transferências (PIX, TED, DOC, transferência entre contas), use categoria "Transferencia" ou "Transferência". Marque como 'expense' para saídas (ex: "Pix enviado", "TED enviado") e 'income' para entradas (ex: "Pix recebido", "TED recebido"). Essas transferências serão analisadas depois para identificar se são entre contas do mesmo titular e não entrarão no somatório de receitas/despesas dos relatórios.
 
 Regras para saldo final:
@@ -53,10 +58,12 @@ Retorne um objeto JSON com esta estrutura exata (sem texto antes ou depois):
   "transactions": [
     { "date": "YYYY-MM-DD", "description": "Descrição", "amount": 100.00, "type": "expense", "category": "Categoria" }
   ],
-  "closingBalance": 1234.56
+  "closingBalance": 1234.56,
+  "message": "Mensagem opcional"
 }
 
 Use closingBalance: null se não conseguir identificar o saldo.
+Se não encontrar transações, explique o motivo no campo 'message' (ex: 'Não foram encontradas transações neste período', 'O arquivo parece ser apenas um resumo sem lançamentos', etc).
 
 --- DADOS DO EXTRATO ---
 `;
@@ -66,12 +73,14 @@ import { extractTextFromFile } from "@/lib/pdf";
 type ExtractionResult = {
   transactions: ExtractedTransaction[];
   closingBalance: number | null;
+  message?: string;
 };
 
 function parseExtractionResult(jsonString: string): ExtractionResult {
   const parsed = JSON.parse(jsonString);
   const transactions: ExtractedTransaction[] = [];
   let closingBalance: number | null = null;
+  let message: string | undefined = undefined;
 
   if (Array.isArray(parsed)) {
     // formato antigo: só array
@@ -112,15 +121,18 @@ function parseExtractionResult(jsonString: string): ExtractionResult {
       const n = parseFloat(cb.replace(",", "."));
       if (!Number.isNaN(n)) closingBalance = n;
     }
+    if (typeof parsed.message === "string") {
+      message = parsed.message;
+    }
   }
 
-  return { transactions, closingBalance };
+  return { transactions, closingBalance, message };
 }
 
 /** Usa Groq para extrair transações do texto. */
 async function extractTransactionsWithAI(
   textContent: string,
-): Promise<{ transactions: ExtractedTransaction[]; closingBalance: number | null; error?: string }> {
+): Promise<{ transactions: ExtractedTransaction[]; closingBalance: number | null; message?: string; error?: string }> {
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) {
     return {
@@ -149,8 +161,8 @@ async function extractTransactionsWithAI(
     });
     const content = completion.choices[0]?.message?.content;
     if (!content) return { transactions: [], closingBalance: null, error: "Resposta vazia do Groq" };
-    const { transactions, closingBalance } = parseExtractionResult(content);
-    return { transactions, closingBalance };
+    const { transactions, closingBalance, message } = parseExtractionResult(content);
+    return { transactions, closingBalance, message };
   } catch (e) {
     console.error("Erro Groq:", e);
     const msg = e instanceof Error ? e.message : String(e);
@@ -218,13 +230,13 @@ export async function uploadAndProcessStatement(
     }
 
     // 2. IA (Groq) — extração do texto; arquivo não é salvo no storage
-    const { transactions, closingBalance, error: aiError } = await extractTransactionsWithAI(textContent);
+    const { transactions, closingBalance, message, error: aiError } = await extractTransactionsWithAI(textContent);
     if (aiError && transactions.length === 0) {
       return { ok: false, error: aiError };
     }
 
     revalidatePath("/dashboard/import", "layout");
-    return { ok: true, transactions, closingBalance: closingBalance ?? null };
+    return { ok: true, transactions, closingBalance: closingBalance ?? null, message };
   } catch (err) {
     console.error("Erro ao processar extrato:", err);
     const msg = err instanceof Error ? err.message : String(err);

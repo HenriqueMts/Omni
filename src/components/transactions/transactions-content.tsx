@@ -31,14 +31,14 @@ import {
 } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxCollection,
-  ComboboxEmpty,
-} from "@/components/ui/combobox";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DateRangePicker, type DateRange } from "@/components/ui/date-picker";
 import { TransactionCreateModal } from "./transaction-create-modal";
 import type { TransactionWithDetails } from "@/services/transactions";
@@ -53,6 +53,7 @@ import {
   Sparkles,
   Calendar,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Filters = {
   dateFrom?: string;
@@ -69,8 +70,10 @@ const TYPE_LABELS: Record<string, string> = {
   transfer: "Transferência",
 };
 
+const ALL_VALUE = "__all__"; // Radix Select não permite value=""
+
 const TYPE_ITEMS: { value: string; label: string }[] = [
-  { value: "", label: "Todos" },
+  { value: ALL_VALUE, label: "Todos" },
   { value: "income", label: "Entrada" },
   { value: "expense", label: "Saída" },
   { value: "transfer", label: "Transferência" },
@@ -160,11 +163,11 @@ export function TransactionsContent({
   const futureCount = transactions.filter((t) => t.date > today).length;
 
   const categoryItems = [
-    { value: "", label: "Todas" },
+    { value: ALL_VALUE, label: "Todas" },
     ...uniqueCategoriesByName(categories).map((c) => ({ value: c.id, label: c.name })),
   ];
   const accountItems = [
-    { value: "", label: "Todas" },
+    { value: ALL_VALUE, label: "Todas" },
     ...accounts.map((a) => ({ value: a.id, label: a.name })),
   ];
 
@@ -173,6 +176,8 @@ export function TransactionsContent({
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     setAppliedSearch(filterSearch);
   }
+
+  const listKey = JSON.stringify(filters);
 
   return (
     <>
@@ -211,99 +216,66 @@ export function TransactionsContent({
             </div>
             <div className="grid gap-1.5">
               <Label className="text-zinc-400 text-xs">Tipo</Label>
-              <Combobox
-                items={TYPE_ITEMS}
-                value={TYPE_ITEMS.find((t) => t.value === filterType) ?? TYPE_ITEMS[0]}
-                onValueChange={(v) => v && setFilterType(v.value)}
-                itemToStringValue={(item) => item.label}
+              <Select
+                value={filterType || ALL_VALUE}
+                onValueChange={(value) => setFilterType(value === ALL_VALUE ? "" : value)}
               >
-                <ComboboxInput
-                  showTrigger
-                  showClear={false}
-                  placeholder="Todos"
-                  className="h-9 w-[130px] border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500"
-                />
-                <ComboboxContent className="z-[200] border-zinc-800 bg-zinc-900">
-                  <ComboboxList className="scrollbar-dark-translucent">
-                    <ComboboxEmpty>Nenhum tipo</ComboboxEmpty>
-                    <ComboboxCollection>
-                      {(item) => (
-                        <ComboboxItem
-                          key={item.value}
-                          value={item}
-                          className="text-zinc-200 data-highlighted:bg-zinc-800 data-highlighted:text-zinc-100"
-                        >
-                          {item.label}
-                        </ComboboxItem>
-                      )}
-                    </ComboboxCollection>
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
+                <SelectTrigger className="h-9 w-[130px] border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent className="z-[200] border-zinc-800 bg-zinc-900">
+                  <SelectGroup>
+                    <SelectLabel>Tipo</SelectLabel>
+                    {TYPE_ITEMS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-1.5">
               <Label className="text-zinc-400 text-xs">Categoria</Label>
-              <Combobox
-                items={categoryItems}
-                value={categoryItems.find((c) => c.value === filterCategoryId) ?? categoryItems[0]}
-                onValueChange={(v) => v && setFilterCategoryId(v.value)}
-                itemToStringValue={(item) => item.label}
+              <Select
+                value={filterCategoryId || ALL_VALUE}
+                onValueChange={(value) => setFilterCategoryId(value === ALL_VALUE ? "" : value)}
               >
-                <ComboboxInput
-                  showTrigger
-                  showClear={false}
-                  placeholder="Todas"
-                  className="h-9 min-w-[140px] border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500"
-                />
-                <ComboboxContent className="z-[200] border-zinc-800 bg-zinc-900">
-                  <ComboboxList className="scrollbar-dark-translucent">
-                    <ComboboxEmpty>Nenhuma categoria</ComboboxEmpty>
-                    <ComboboxCollection>
-                      {(item) => (
-                        <ComboboxItem
-                          key={item.value}
-                          value={item}
-                          className="text-zinc-200 data-highlighted:bg-zinc-800 data-highlighted:text-zinc-100"
-                        >
-                          {item.label}
-                        </ComboboxItem>
-                      )}
-                    </ComboboxCollection>
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
+                <SelectTrigger className="h-9 min-w-[140px] border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500">
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent className="z-[200] border-zinc-800 bg-zinc-900">
+                  <SelectGroup>
+                    <SelectLabel>Categorias</SelectLabel>
+                    {categoryItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-1.5">
               <Label className="text-zinc-400 text-xs">Conta</Label>
-              <Combobox
-                items={accountItems}
-                value={accountItems.find((a) => a.value === filterAccountId) ?? accountItems[0]}
-                onValueChange={(v) => v && setFilterAccountId(v.value)}
-                itemToStringValue={(item) => item.label}
+              <Select
+                value={filterAccountId || ALL_VALUE}
+                onValueChange={(value) => setFilterAccountId(value === ALL_VALUE ? "" : value)}
               >
-                <ComboboxInput
-                  showTrigger
-                  showClear={false}
-                  placeholder="Todas"
-                  className="h-9 min-w-[140px] border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500"
-                />
-                <ComboboxContent className="z-[200] border-zinc-800 bg-zinc-900">
-                  <ComboboxList className="scrollbar-dark-translucent">
-                    <ComboboxEmpty>Nenhuma conta</ComboboxEmpty>
-                    <ComboboxCollection>
-                      {(item) => (
-                        <ComboboxItem
-                          key={item.value}
-                          value={item}
-                          className="text-zinc-200 data-highlighted:bg-zinc-800 data-highlighted:text-zinc-100"
-                        >
-                          {item.label}
-                        </ComboboxItem>
-                      )}
-                    </ComboboxCollection>
-                  </ComboboxList>
-                </ComboboxContent>
-              </Combobox>
+                <SelectTrigger className="h-9 min-w-[140px] border-zinc-700 bg-zinc-800 text-zinc-200 placeholder:text-zinc-500">
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent className="z-[200] border-zinc-800 bg-zinc-900">
+                  <SelectGroup>
+                    <SelectLabel>Contas</SelectLabel>
+                    {accountItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-1.5 flex-1 min-w-[180px]">
               <Label className="text-zinc-400 text-xs">Buscar descrição</Label>
@@ -406,13 +378,21 @@ export function TransactionsContent({
                   <TableHead className="text-zinc-400 text-right">Valor</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {transactions.map((t) => {
+              <TableBody key={listKey}>
+                {transactions.map((t, index) => {
                   const isFuture = t.date > today;
                   return (
                     <TableRow
                       key={t.id}
-                      className="border-zinc-800 hover:bg-zinc-800/50"
+                      className={cn(
+                        "border-zinc-800 hover:bg-zinc-800/50 animate-fade-in-up animate-opacity-0",
+                        // Adiciona um delay escalonado para cada linha (max 10 itens para não demorar muito)
+                        index < 10 && `animate-delay-${index}`
+                      )}
+                      style={{
+                        animationDelay: `${index * 0.05}s`,
+                        animationFillMode: "forwards",
+                      }}
                     >
                       <TableCell className="text-zinc-300 font-medium">
                         <span className={isFuture ? "text-amber-400/90" : ""}>

@@ -7,8 +7,6 @@ import {
   CreditCard,
   PieChart,
   ArrowRightLeft,
-  Settings,
-  LifeBuoy,
 } from "lucide-react";
 
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -36,10 +34,6 @@ const navMain = [
     icon: ArrowRightLeft,
   },
   { title: "Relatórios", url: "/dashboard/reports", icon: PieChart },
-];
-const navSecondary = [
-  { title: "Configurações", url: "/dashboard/settings", icon: Settings },
-  { title: "Ajuda", url: "/help", icon: LifeBuoy },
 ];
 
 type SidebarUser = { id: string; name: string; email: string; avatar: string };
@@ -87,28 +81,6 @@ export function AppSidebar({
                 </SidebarMenuItem>
               );
             })}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        {/* 3. NAVEGAÇÃO SECUNDÁRIA */}
-        <SidebarGroup className="mt-auto group-data-[collapsible=icon]:px-0">
-          <SidebarGroupLabel>Suporte</SidebarGroupLabel>
-          <SidebarMenu>
-            {navSecondary.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton
-                  asChild
-                  size="sm"
-                  tooltip={item.title}
-                  className="text-zinc-500 hover:text-zinc-200"
-                >
-                  <Link href={item.url}>
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

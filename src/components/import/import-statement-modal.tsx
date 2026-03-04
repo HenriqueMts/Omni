@@ -30,6 +30,7 @@ type TransactionsData = {
   transactions: ExtractedTransaction[];
   closingBalance: number | null;
   selectedAccountId: string;
+  message?: string;
 };
 
 type Props = Readonly<{ accounts: Account[] }>;

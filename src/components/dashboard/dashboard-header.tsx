@@ -1,9 +1,9 @@
 "use client";
 
-import { Search, Bell } from "lucide-react";
+import { Search } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NotificationsPopover } from "./notifications-popover";
 
 export function DashboardHeader() {
   return (
@@ -23,15 +23,7 @@ export function DashboardHeader() {
         </div>
       </div>
       <div className="flex items-center gap-2 ml-auto shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 relative"
-          aria-label="Notificações"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500" />
-        </Button>
+        <NotificationsPopover />
       </div>
     </header>
   );
