@@ -12,10 +12,23 @@ import { GreetingCard } from "@/components/dashboard/greeting-card";
 import { CashFlowChart } from "@/components/dashboard/cash-flow-chart";
 import { AISuggestionsCard } from "@/components/dashboard/ai-suggestions-card";
 import { ImportExtractsButton } from "@/components/dashboard/import-extracts-button";
+import { getAuthUser } from "@/lib/supabase/server";
+import { getProfileById } from "@/services/profile";
 
 export default async function DashboardPage() {
-  const { income, expense, investment, total, recentTransactions, chartData } =
-    await getDashboardStats();
+  const [stats, { user: authUser }] = await Promise.all([
+    getDashboardStats(),
+    getAuthUser(),
+  ]);
+
+  const { income, expense, investment, total, recentTransactions, chartData } = stats;
+
+  const profile = authUser ? await getProfileById(authUser.id) : null;
+  const userName =
+    profile?.fullName ??
+    authUser?.user_metadata?.full_name ??
+    authUser?.email?.split("@")[0] ??
+    "Usuário";
 
   const savings = income - expense;
   const savingsPercent =
@@ -39,7 +52,7 @@ export default async function DashboardPage() {
 
       {/* Card de boas-vindas */}
       <div className="animate-fade-in-up animate-opacity-0 animate-delay-2">
-        <GreetingCard userName="Eduardo Silva" />
+        <GreetingCard userName={userName} />
       </div>
 
       {/* KPIs: largura mínima por card; quando não couber, o card desce para a próxima linha */}

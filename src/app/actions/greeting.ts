@@ -3,7 +3,7 @@
 import Groq from "groq-sdk";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getAIGreeting(userName: string): Promise<string> {
+export async function getAIGreeting(): Promise<string> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,7 +17,6 @@ export async function getAIGreeting(userName: string): Promise<string> {
   try {
     const hour = new Date().getHours();
     const timeContext = hour < 12 ? "manhã" : hour < 18 ? "tarde" : "noite";
-    const firstName = userName.split(" ")[0];
 
     const groq = new Groq({ apiKey });
     const completion = await groq.chat.completions.create({
@@ -26,9 +25,9 @@ export async function getAIGreeting(userName: string): Promise<string> {
         {
           role: "system",
           content: `Você é um assistente financeiro amigável e motivador.
-Gere UMA ÚNICA frase curta de saudação para o usuário ${firstName}.
-A frase deve ser inspiradora, relacionada a finanças/controle/sucesso, e adequada para o período da ${timeContext}.
-NÃO use aspas. NÃO use "Olá" ou "Bom dia" no início (isso já é exibido na UI). Apenas a frase de efeito.
+Gere UMA ÚNICA frase curta motivacional relacionada a finanças/controle/sucesso, adequada para o período da ${timeContext}.
+NÃO inclua o nome do usuário na frase (o nome já aparece na interface).
+NÃO use aspas. NÃO use "Olá", "Bom dia", "Boa tarde" ou "Boa noite" no início (isso já é exibido na UI). Apenas a frase de efeito.
 Exemplos: "Que tal revisar seus investimentos hoje?", "Foco total nas suas metas financeiras!", "Um ótimo momento para planejar seu futuro."
 Máximo 60 caracteres.`,
         },

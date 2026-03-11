@@ -44,8 +44,7 @@ export function GreetingCard({ userName = "Demo" }: { userName?: string }) {
     update();
     const interval = setInterval(update, 60_000);
 
-    // Busca mensagem da IA
-    getAIGreeting(userName).then(setAiMessage);
+    getAIGreeting().then(setAiMessage);
 
     return () => clearInterval(interval);
   }, [userName]);
